@@ -427,10 +427,10 @@ def main(argv: list[str] | None = None) -> None:
         else:
             parser.error(f"Nieznana komenda: {command}")
     except KeyboardInterrupt:
-        console.print("\nAnulowano.", file=sys.stderr)
+        Console(stderr=True).print("\nAnulowano.")
         raise SystemExit(130)
     except Exception as exc:
-        console.print(f"[red]Błąd:[/red] {exc}", file=sys.stderr)
+        Console(stderr=True).print(f"[red]Błąd:[/red] {exc}")
         raise SystemExit(1)
 
 
