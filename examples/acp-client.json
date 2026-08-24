@@ -1,0 +1,8 @@
+{
+  "name": "subactor-shell",
+  "command": "subactor-shell",
+  "args": ["acp-agent"],
+  "env": {
+    "SUBACTOR_SHELL_CONFIG": "~/.config/subactor-shell/config.toml"
+  }
+}

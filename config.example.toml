@@ -1,0 +1,93 @@
+# Konfiguracja subactor-shell-bridge 0.2.
+
+[defaults]
+provider = "mock"
+model = "mock"
+max_attachment_bytes = 5242880
+max_attachment_text_chars = 262144
+
+# Pełna historia pozostaje w SQLite. Model otrzymuje WorkingState, kilka
+# ostatnich wiadomości oraz lokalnie wybrane fragmenty danych/artefaktów.
+[context]
+recent_messages = 6
+max_history_chars = 12000
+max_message_chars = 4000
+max_data_chars = 6000
+max_attachment_prompt_chars = 8000
+artifact_chunk_chars = 1800
+max_artifact_chunks = 4
+max_embedded_context_chars = 8000
+max_route_context_chars = 4000
+
+# Kaskada: phrase/template -> lokalny parser 4B -> tani parser zdalny ->
+# provider rozmowy / duży model. Model generuje wyłącznie IntentIR v1.
+[orchestration]
+enabled = true
+mode = "active" # active | shadow | off
+local_parser_provider = ""
+local_parser_model = ""
+cheap_parser_provider = ""
+cheap_parser_model = ""
+large_provider = ""
+large_model = ""
+top_k = 5
+min_candidate_score = 0.32
+deterministic_threshold = 0.93
+local_execute_threshold = 0.82
+cheap_remote_threshold = 0.68
+max_parser_output_tokens = 192
+allow_destructive = false
+show_route = false
+intent_catalog_paths = []
+
+[providers.mock]
+kind = "mock"
+model = "mock"
+
+# Przykład lokalnego endpointu OpenAI-compatible (vLLM/SGLang/llama.cpp).
+# Po uruchomieniu ustaw orchestration.local_parser_provider = "local_4b".
+[providers.local_4b]
+kind = "openai_compat"
+base_url = "http://127.0.0.1:8000/v1"
+endpoint = "/chat/completions"
+api_key_ref = ""
+auth_required = false
+model = "local-4b-instruct"
+max_tokens = 512
+max_output_tokens = 192
+structured_mode = "json_schema"
+timeout_seconds = 60.0
+input_cost_per_million = 0.0
+cached_input_cost_per_million = 0.0
+output_cost_per_million = 0.0
+
+[vault]
+address = "http://127.0.0.1:8200"
+token_ref = "env://VAULT_TOKEN"
+namespace = ""
+verify_tls = true
+timeout_seconds = 10.0
+
+[control]
+base_url = "http://127.0.0.1:8088"
+cli_path = ""
+account_id = "softreck"
+provider = "chatgpt"
+tool_id = "codex"
+bearer_ref = "file://~/.config/subactor-shell/control.token"
+allowed_tools = ["cli.status", "cli.plan", "cli.execute"]
+timeout_seconds = 10.0
+
+# Nazwane connectory są allowlistą. Process connector nie używa shell=True;
+# plan JSON jest przekazywany przez stdin. Przykład:
+# [connectors.my_script]
+# kind = "process"
+# command = ["/opt/subactor/bin/my-connector", "--json-stdin"]
+# allowed_operations = ["project.inspect", "project.apply"]
+# inherit_env = false
+# pass_env = ["PATH", "LANG", "LC_ALL", "TZ"]
+# timeout_seconds = 30.0
+# output_limit_bytes = 65536
+# effect = "external_write"
+# [connectors.my_script.env_refs]
+# API_TOKEN = "vault://secret/subactor/connector#token"

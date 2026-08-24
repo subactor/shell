@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://subactor.local/schemas/intent-catalog.v1.schema.json",
+  "title": "Subactor Intent Catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intents"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "version": {"const": 1},
+    "intents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/intent"}
+    }
+  },
+  "$defs": {
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "phrases", "execution"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1},
+        "phrases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "required_args": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "optional_args": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "defaults": {"type": "object"},
+        "risk": {"type": "string"},
+        "constraints": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "execution": {"$ref": "#/$defs/execution"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["chat", "builtin", "connector", "process_pack"]
+        },
+        "connector": {"type": "string"},
+        "operation": {"type": "string"},
+        "effect": {
+          "type": "string",
+          "enum": ["read", "local_write", "external_write", "destructive"]
+        },
+        "argument_map": {"type": "object"},
+        "steps": {
+          "type": "array",
+          "items": {"type": "object"}
+        }
+      }
+    }
+  }
+}

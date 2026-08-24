@@ -1,0 +1,47 @@
+{
+  "$schema": "../schemas/intent-catalog.v1.schema.json",
+  "version": 1,
+  "intents": [
+    {
+      "id": "project.inspect",
+      "description": "Odczytaj z lokalnego connectora stan nazwanego projektu.",
+      "phrases": [
+        "sprawdź projekt {project_ref}",
+        "pokaż stan projektu {project_ref}"
+      ],
+      "required_args": ["project_ref"],
+      "risk": "low",
+      "constraints": ["no_secret_export"],
+      "execution": {
+        "kind": "connector",
+        "connector": "project_ops",
+        "operation": "project.inspect",
+        "effect": "read",
+        "argument_map": {
+          "project_ref": "$args.project_ref"
+        }
+      }
+    },
+    {
+      "id": "project.apply",
+      "description": "Zastosuj przygotowaną zmianę do nazwanego projektu i środowiska.",
+      "phrases": [
+        "wdroż projekt {project_ref} na {environment}",
+        "zastosuj projekt {project_ref} w {environment}"
+      ],
+      "required_args": ["project_ref", "environment"],
+      "risk": "medium",
+      "constraints": ["no_secret_export"],
+      "execution": {
+        "kind": "connector",
+        "connector": "project_ops",
+        "operation": "project.apply",
+        "effect": "external_write",
+        "argument_map": {
+          "project_ref": "$args.project_ref",
+          "environment": "$args.environment"
+        }
+      }
+    }
+  ]
+}
