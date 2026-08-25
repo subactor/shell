@@ -2,9 +2,12 @@ import asyncio
 import json
 
 import httpx
+import pytest
 
 from subactor_shell.providers.anthropic import AnthropicProvider
 from subactor_shell.providers.openai_compat import OpenAICompatProvider
+from subactor_shell.providers.base import ProviderError
+from subactor_shell.providers.subactor_control import SubactorControlProvider
 
 
 def collect(provider, messages, model="m"):
@@ -88,3 +91,73 @@ def test_anthropic_messages_stream():
             {"role": "user", "content": "hello"},
         ],
     ) == "CD"
+
+
+def test_subactor_control_provider_uses_governed_founder_surface():
+    token = "private-control-token"
+
+    def handler(request: httpx.Request):
+        assert request.url.path == "/api/llm/intent"
+        assert request.headers["authorization"] == f"Bearer {token}"
+        payload = json.loads(request.content)
+        assert payload == {
+            "surface": "founder_autonomy",
+            "text": "Co teraz?",
+            "history": [{"role": "assistant", "content": "Poprzednia odpowiedź"}],
+        }
+        return httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {"summary": "Są dwa zadania."},
+                "actions": [{"label": "Otwórz kolejkę", "url": "http://127.0.0.1:8091/founder"}],
+                "diagnostics": {
+                    "observedLocal": "25.08.2026, 03:00:00 CEST",
+                    "durationMs": 37,
+                    "correlationId": "cid-123",
+                    "markdownDownloadUrl": "http://127.0.0.1:8091/api/chat/diagnostics/report.md",
+                },
+            },
+        )
+
+    provider = SubactorControlProvider(
+        base_url="http://127.0.0.1:8091",
+        endpoint="/api/llm/intent",
+        api_key=token,
+        transport=httpx.MockTransport(handler),
+    )
+    result = collect(
+        provider,
+        [
+            {"role": "system", "content": "Nie wysyłaj tego kontekstu bezpośrednio"},
+            {"role": "assistant", "content": "Poprzednia odpowiedź"},
+            {"role": "user", "content": "Co teraz?"},
+        ],
+        "control",
+    )
+
+    assert "Są dwa zadania." in result
+    assert "Otwórz kolejkę" in result
+    assert "cid-123" in result
+    assert "report.md" in result
+    assert token not in result
+    assert provider.last_usage is not None
+
+
+def test_subactor_control_provider_redacts_failed_response():
+    token = "never-print-this-token"
+
+    def handler(_request: httpx.Request):
+        return httpx.Response(401, json={"code": "authentication_required", "detail": token})
+
+    provider = SubactorControlProvider(
+        base_url="http://127.0.0.1:8091",
+        endpoint="/api/llm/intent",
+        api_key=token,
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(ProviderError) as caught:
+        collect(provider, [{"role": "user", "content": "Co teraz?"}], "control")
+
+    assert "HTTP 401" in str(caught.value)
+    assert token not in str(caught.value)
