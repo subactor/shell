@@ -6,6 +6,7 @@ from .anthropic import AnthropicProvider
 from .base import ChatProvider, ProviderBundle, ProviderError, StructuredCompletion
 from .mock import MockProvider
 from .openai_compat import OpenAICompatProvider
+from .subactor_control import SubactorControlProvider
 
 
 def build_provider(profile: ProviderProfile, resolver: SecretResolver) -> ProviderBundle:
@@ -25,6 +26,13 @@ def build_provider(profile: ProviderProfile, resolver: SecretResolver) -> Provid
             timeout_seconds=profile.timeout_seconds,
             extra_headers=profile.extra_headers,
             structured_mode=profile.structured_mode,
+        )
+    elif kind == "subactor_control":
+        provider = SubactorControlProvider(
+            base_url=profile.base_url,
+            endpoint=profile.endpoint,
+            api_key=api_key,
+            timeout_seconds=profile.timeout_seconds,
         )
     elif kind == "anthropic":
         if not api_key:
@@ -47,6 +55,7 @@ __all__ = [
     "ChatProvider",
     "MockProvider",
     "OpenAICompatProvider",
+    "SubactorControlProvider",
     "ProviderBundle",
     "ProviderError",
     "StructuredCompletion",

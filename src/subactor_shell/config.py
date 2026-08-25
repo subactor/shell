@@ -57,6 +57,16 @@ intent_catalog_paths = []
 kind = "mock"
 model = "mock"
 
+# Uziemiona rozmowa Founder przez kanoniczny Subactor Control.
+[providers.control]
+kind = "subactor_control"
+base_url = "http://127.0.0.1:8091"
+endpoint = "/api/llm/intent"
+api_key_ref = "env://SUBACTOR_ADMIN_TOKEN"
+model = "control"
+auth_required = true
+timeout_seconds = 90.0
+
 # Przykład lokalnego endpointu OpenAI-compatible (vLLM/SGLang/llama.cpp).
 # Po uruchomieniu ustaw orchestration.local_parser_provider = "local_4b".
 [providers.local_4b]
@@ -82,7 +92,7 @@ verify_tls = true
 timeout_seconds = 10.0
 
 [control]
-base_url = "http://127.0.0.1:8088"
+base_url = "http://127.0.0.1:8197"
 cli_path = ""
 account_id = "softreck"
 provider = "chatgpt"
@@ -145,6 +155,15 @@ DEFAULTS: dict[str, Any] = {
     },
     "providers": {
         "mock": {"kind": "mock", "model": "mock"},
+        "control": {
+            "kind": "subactor_control",
+            "base_url": "http://127.0.0.1:8091",
+            "endpoint": "/api/llm/intent",
+            "api_key_ref": "env://SUBACTOR_ADMIN_TOKEN",
+            "model": "control",
+            "auth_required": True,
+            "timeout_seconds": 90.0,
+        },
         "local_4b": {
             "kind": "openai_compat",
             "base_url": "http://127.0.0.1:8000/v1",
@@ -169,7 +188,7 @@ DEFAULTS: dict[str, Any] = {
         "timeout_seconds": 10.0,
     },
     "control": {
-        "base_url": "http://127.0.0.1:8088",
+        "base_url": "http://127.0.0.1:8197",
         "cli_path": "",
         "account_id": "softreck",
         "provider": "chatgpt",
