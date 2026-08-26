@@ -21,9 +21,18 @@ from .repl import ShellRepl
 from .store import Store
 
 
-def build_parser() -> argparse.ArgumentParser:
+def command_name(value: str | None = None) -> str:
+    name = Path(value or sys.argv[0]).name
+    return "subactor" if name == "subactor" else "subactor-shell"
+
+
+def canonical_chat_provider(program: str, requested: str | None) -> str | None:
+    return requested or ("control" if program == "subactor" else None)
+
+
+def build_parser(program: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="subactor-shell",
+        prog=command_name(program),
         description="Token-aware, bezpieczna i trwała rozmowa w shellu dla Subactor.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -327,7 +336,8 @@ def _receipts_command(store: Store, args: argparse.Namespace, console: Console) 
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = build_parser()
+    program = command_name()
+    parser = build_parser(program)
     args = parser.parse_args(argv)
     console = Console()
     command = args.command or "chat"
@@ -336,6 +346,8 @@ def main(argv: list[str] | None = None) -> None:
         args.provider = None
         args.model = None
         args.name = "Rozmowa shell"
+    if command in {"chat", "one"}:
+        args.provider = canonical_chat_provider(program, args.provider)
     try:
         if command == "init":
             config_path, data_dir = initialize_layout(args.config, args.data_dir)

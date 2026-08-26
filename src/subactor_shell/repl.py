@@ -18,6 +18,7 @@ from .chat import ChatError, ChatService
 from .control import ControlError, SubactorControlClient
 from .models import Session
 from .orchestration import OrchestrationError
+from .terminal import terminal_hyperlinks_enabled, ticket_link_lines
 
 
 HELP = """[bold]Rozmowa[/bold]
@@ -271,14 +272,27 @@ class ShellRepl:
             except (NotImplementedError, RuntimeError):
                 pass
             self.console.print("[bold cyan]agent>[/bold cyan] ", end="")
+            answer_parts: list[str] = []
             async for chunk in self.chat.stream_message(
                 self.session.id,
                 text,
                 attachment_paths=list(self.pending_attachments),
                 cancel_event=cancel_event,
             ):
+                answer_parts.append(chunk)
                 self.console.print(Text(chunk), end="", soft_wrap=True)
             self.console.print()
+            profile = self.chat.config.provider(self.session.provider)
+            if profile.kind == "subactor_control":
+                lines = ticket_link_lines(
+                    "".join(answer_parts),
+                    profile.base_url,
+                    hyperlinks=terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal),
+                )
+                if lines:
+                    self.console.print("  [dim][tickety][/dim]")
+                    for line in lines:
+                        self.console.print(line)
             if cancel_event.is_set():
                 self.console.print("[yellow]Anulowano.[/yellow]")
             if bool(self.chat.config.orchestration.get("show_route", False)):
