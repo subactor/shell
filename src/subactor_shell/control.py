@@ -68,15 +68,20 @@ class SubactorControlClient:
             with httpx.Client(
                 base_url=self.base_url, timeout=self.timeout, transport=self.transport
             ) as client:
-                response = client.get("/healthz")
+                response = client.get("/health")
         except httpx.HTTPError as exc:
             return False, f"błąd połączenia ({type(exc).__name__})"
         if response.status_code != 200:
             return False, f"HTTP {response.status_code}"
         try:
-            status = response.json().get("status")
+            payload = response.json()
         except ValueError:
             return False, "odpowiedź nie jest JSON"
+        if not isinstance(payload, dict):
+            return False, "odpowiedź JSON nie jest obiektem"
+        if payload.get("ok") is True:
+            return True, "ok=true"
+        status = payload.get("status")
         return status == "ok", f"status={status!r}"
 
     def _rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
