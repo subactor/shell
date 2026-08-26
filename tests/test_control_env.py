@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from subactor_shell.config import load_config
-from subactor_shell.control_env import ControlEnvironmentError, apply_control_environment
+from subactor_shell.control_env import ControlEnvironmentError, apply_control_environment, default_environment_file
 
 
 def write_environment(path, values: dict[str, str], mode: int = 0o600) -> None:
@@ -41,3 +41,11 @@ def test_control_provider_honors_explicit_environment_override(tmp_path, monkeyp
     monkeypatch.setenv("SUBACTOR_CONTROL_URL", "http://control.test")
     config = load_config(config_path, data_dir)
     assert config.provider("control").base_url == "http://control.test"
+
+
+def test_default_environment_file_uses_configured_workspace_root(tmp_path, monkeypatch) -> None:
+    environment_file = tmp_path / "platform" / ".env"
+    environment_file.parent.mkdir()
+    write_environment(environment_file, {"SUBACTOR_PLANFILE_URL": "http://planfile.test"})
+    monkeypatch.setenv("SUBACTOR_WORKSPACE_ROOT", str(tmp_path))
+    assert default_environment_file() == environment_file
