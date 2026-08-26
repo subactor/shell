@@ -35,8 +35,8 @@ def args(**values):
     return argparse.Namespace(**(defaults | values))
 
 
-def client(handler, *, token="secret"):
-    settings = OperationSettings("http://control.test", "http://planfile.test", token)
+def client(handler, *, bearer="test-value"):
+    settings = OperationSettings("http://control.test", "http://planfile.test", bearer)
     return OperationsClient(settings, transport=httpx.MockTransport(handler))
 
 
@@ -65,7 +65,7 @@ def test_authenticated_request_never_runs_without_token() -> None:
         called = True
         return httpx.Response(200, json={"ok": True})
 
-    api = client(handler, token="")
+    api = client(handler, bearer="")
     with pytest.raises(OperationsError, match="Brak SUBACTOR_ADMIN_TOKEN"):
         api.request("GET", "/api/system/dashboard")
     assert called is False
@@ -73,7 +73,7 @@ def test_authenticated_request_never_runs_without_token() -> None:
 
 def test_client_binds_bearer_and_rejects_cross_origin_path() -> None:
     def handler(request):
-        assert request.headers["authorization"] == "Bearer secret"
+        assert request.headers["authorization"] == "Bearer test-value"
         assert str(request.url) == "http://control.test/api/system/dashboard"
         return httpx.Response(200, json={"ok": True})
 
@@ -115,4 +115,3 @@ def test_writes_require_explicit_execute_confirmation() -> None:
         run_operational_command(
             args(command="api", method="DELETE", path="/api/tokens/1"), Console(), client(handler)
         )
-
