@@ -33,13 +33,46 @@ Pełny transcript nadal jest zapisywany w SQLite, ale provider rozmowy dostaje t
 
 ## Instalacja
 
+### Nazwy poleceń
+
+`subactor` jest kanonicznym poleceniem operatorskim. Dla `chat` i `one`
+domyślnie wybiera profil `control`, a komendy operacyjne (`status`, `tickets`,
+`health`, `dispatch`, `uri`, `api`, `get`, `post`, `endpoints`) prowadzi przez
+ograniczony adapter Subactor Control.
+
+`subactor-shell` uruchamia ten sam pakiet jako jawną, samodzielną powłokę i
+zachowuje wybór providera z lokalnej konfiguracji. Niskopoziomowy klient Node
+Platformy ma odrębną nazwę pakietową `subactor-founder-cli`; historyczny
+wrapper `platform/bin/subactor` nie powinien być podpinany do `PATH` zamiast
+kanonicznej powłoki.
+
+Do trwałej instalacji operatorskiej zalecany jest dedykowany venv, niezależny
+od ticketowych worktree:
+
+```bash
+python -m venv ~/.local/share/subactor-shell/venv
+~/.local/share/subactor-shell/venv/bin/python -m pip install .
+mkdir -p ~/.local/bin
+ln -sfn ~/.local/share/subactor-shell/venv/bin/subactor ~/.local/bin/subactor
+ln -sfn ~/.local/share/subactor-shell/venv/bin/subactor-shell ~/.local/bin/subactor-shell
+hash -r
+```
+
+Weryfikacja nie powinna wskazywać `.worktrees/` ani `platform/bin/subactor`:
+
+```bash
+readlink -f "$(command -v subactor)"
+subactor --version
+subactor-shell --version
+```
+
 Z wheel:
 
 ```bash
 python -m venv .venv
 . .venv/bin/activate
 pip install ./subactor_shell_bridge-0.2.0-py3-none-any.whl
-subactor-shell init
+subactor init
 ```
 
 Ze źródeł:
@@ -48,7 +81,7 @@ Ze źródeł:
 python -m venv .venv
 . .venv/bin/activate
 pip install -e .
-subactor-shell init
+subactor init
 ```
 
 Domyślne lokalizacje:
@@ -64,7 +97,7 @@ Katalog danych otrzymuje tryb `0700`, a config, SQLite i artefakty `0600`, o ile
 ## Szybki start
 
 ```bash
-subactor-shell chat
+subactor chat
 ```
 
 Przykładowe polecenia w REPL:
@@ -83,7 +116,7 @@ pokaż zużycie tokenów
 Jedna wiadomość bez REPL:
 
 ```bash
-subactor-shell one 'pokaż sesje'
+subactor one 'pokaż sesje'
 ```
 
 Przy znanym intencie read-only wynik może zostać wykonany lokalnie bez wywołania providera rozmowy.

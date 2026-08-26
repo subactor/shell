@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.1 — 2026-08-26
+
+### Dodano
+
+- kanoniczny entrypoint `subactor`, który dla rozmowy domyślnie używa
+  ograniczonego providera Subactor Control;
+- jawne komendy operacyjne Control: `status`, `tickets`, `health`, `dispatch`,
+  `uri`, `api`, `get`, `post` i `endpoints`;
+- bezpieczne linki do ticketów i diagnostykę kontraktu Control.
+
+### Zmieniono
+
+- `subactor-shell` pozostaje nazwą samodzielnej powłoki z providerem wybranym
+  w lokalnej konfiguracji;
+- dokumentacja instalacji rozdziela kanoniczny `subactor` od niskopoziomowego
+  klienta Platformy `subactor-founder-cli` i nie wiąże runtime'u z ticketowym
+  worktree;
+- diagnostyka odróżnia zdrowie operacyjnego Control od opcjonalnej granicy
+  MCP.
+
 ## 0.2.0 — 2026-08-24
 
 ### Dodano
