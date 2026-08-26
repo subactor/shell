@@ -27,8 +27,8 @@ def test_control_validates_boundary_and_calls_tool():
     calls = []
 
     def handler(request: httpx.Request):
-        if request.url.path == "/healthz":
-            return httpx.Response(200, json={"status": "ok"})
+        if request.url.path == "/health":
+            return httpx.Response(200, json={"ok": True})
         payload = json.loads(request.content)
         calls.append(payload)
         if payload["method"] == "tools/list":
@@ -54,9 +54,21 @@ def test_control_validates_boundary_and_calls_tool():
     client = SubactorControlClient(
         config(), Resolver(), transport=httpx.MockTransport(handler)  # type: ignore[arg-type]
     )
-    assert client.health() == (True, "status='ok'")
+    assert client.health() == (True, "ok=true")
     assert client.call_tool("cli.status", {}) == {"content": "ok"}
     assert [item["method"] for item in calls] == ["tools/list", "tools/call"]
+
+
+def test_control_health_accepts_legacy_status_contract():
+    def handler(request: httpx.Request):
+        assert request.url.path == "/health"
+        return httpx.Response(200, json={"status": "ok"})
+
+    client = SubactorControlClient(
+        config(), Resolver(), transport=httpx.MockTransport(handler)  # type: ignore[arg-type]
+    )
+
+    assert client.health() == (True, "status='ok'")
 
 
 def test_control_rejects_boundary_drift_and_unconfirmed_execute():
