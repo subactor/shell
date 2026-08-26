@@ -21,6 +21,7 @@ dependencies = [
 dev = ["pytest>=8,<10", "pytest-asyncio>=0.23,<1"]
 
 [project.scripts]
+subactor = "subactor_shell.app:main"
 subactor-shell = "subactor_shell.app:main"
 
 [tool.setuptools.packages.find]
