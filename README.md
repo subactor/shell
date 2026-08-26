@@ -1,6 +1,6 @@
-# Subactor Shell 0.2.1
+# Subactor Shell 0.2.2
 
-Subactor Shell jest trwałą warstwą rozmowy i orkiestracji dla terminala oraz klientów ACP. Wersja 0.2.1 integruje pytania operacyjne z zarządzanym CLI Subactora i poprawia obsługę kończenia sesji.
+Subactor Shell jest trwałą warstwą rozmowy i orkiestracji dla terminala oraz klientów ACP. Wersja 0.2.2 integruje pytania operacyjne z zarządzanym CLI Subactora, poprawia obsługę kończenia sesji i nie przejmuje nazwy Founder Chat.
 
 ```text
 polecenie użytkownika
@@ -32,6 +32,12 @@ Pełny transcript nadal jest zapisywany w SQLite, ale provider rozmowy dostaje t
 - migracja istniejącej bazy 0.1 bez usuwania sesji ani wiadomości.
 
 ## Instalacja
+
+Pakiet instaluje wyłącznie polecenie `subactor-shell`. Nazwa `subactor` jest
+zarezerwowana dla Founder Chat dostarczanego przez Platformę, dzięki czemu
+`subactor chat` zachowuje swój interfejs, pełną diagnostykę i kontrakt sesji.
+Powłokę z trwałym stanem, Vault, lokalnym routingiem i ACP uruchamia się
+jawnie przez `subactor-shell chat`.
 
 Z wheel:
 

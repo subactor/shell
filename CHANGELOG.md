@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2 — 2026-08-26
+
+### Naprawiono
+
+- usunięto kolidujący console script `subactor`, aby instalacja Shell nie
+  zastępowała Founder Chat z Platformy;
+- usunięto zależny od nazwy binarki wybór providera `control`; `subactor-shell`
+  ponownie respektuje jawny provider i lokalną konfigurację;
+- dodano regresję pakietową, która wymaga, by publicznym entrypointem tego
+  pakietu pozostawał wyłącznie `subactor-shell`.
+
 ## 0.2.0 — 2026-08-24
 
 ### Dodano

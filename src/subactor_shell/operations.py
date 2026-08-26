@@ -1,4 +1,4 @@
-"""Bounded operational HTTP commands owned by the canonical Subactor shell."""
+"""Bounded operational HTTP commands exposed by Subactor Shell."""
 
 from __future__ import annotations
 
