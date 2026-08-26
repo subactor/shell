@@ -320,7 +320,9 @@ class AppConfig:
             name=name,
             kind=str(item.get("kind", "openai_compat")),
             model=model,
-            base_url=str(item.get("base_url", "")),
+            base_url=str(os.environ.get("SUBACTOR_CONTROL_URL") or item.get("base_url", ""))
+            if name == "control"
+            else str(item.get("base_url", "")),
             endpoint=str(item.get("endpoint", "")),
             api_key_ref=api_key_ref,
             auth_required=bool(item.get("auth_required", bool(api_key_ref))),

@@ -17,6 +17,7 @@ from .chat import ChatService
 from .compiler import ExecutionPlan
 from .config import initialize_layout, load_config
 from .control import SubactorControlClient
+from .control_env import apply_control_environment
 from .operations import OperationSettings, OperationsClient, run_operational_command
 from .repl import ShellRepl
 from .store import Store
@@ -388,6 +389,8 @@ def main(argv: list[str] | None = None) -> None:
             console.print(f"Config: [cyan]{config_path}[/cyan] mode={_mode(config_path)}")
             console.print(f"Dane:   [cyan]{data_dir}[/cyan] mode={_mode(data_dir)}")
             return
+
+        apply_control_environment()
 
         operational = {"status", "tickets", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
         if command in operational or (command == "plans" and args.plans_command == "remote"):

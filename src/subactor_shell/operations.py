@@ -16,6 +16,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from .control_env import apply_control_environment
 from .terminal import canonical_ticket_links, terminal_hyperlinks_enabled
 
 
@@ -81,7 +82,11 @@ class OperationSettings:
 
     @classmethod
     def from_environment(cls, env: Mapping[str, str] | None = None) -> "OperationSettings":
-        values = os.environ if env is None else env
+        if env is None:
+            apply_control_environment()
+            values = os.environ
+        else:
+            values = env
         control_url = _validated_origin(
             values.get("SUBACTOR_CONTROL_URL", "http://127.0.0.1:8091"), "SUBACTOR_CONTROL_URL"
         )
