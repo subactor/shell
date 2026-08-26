@@ -17,6 +17,7 @@ from .chat import ChatService
 from .compiler import ExecutionPlan
 from .config import initialize_layout, load_config
 from .control import SubactorControlClient
+from .operations import OperationSettings, OperationsClient, run_operational_command
 from .repl import ShellRepl
 from .store import Store
 
@@ -101,6 +102,39 @@ def build_parser(program: str | None = None) -> argparse.ArgumentParser:
     plans_apply = plans_sub.add_parser("apply")
     plans_apply.add_argument("plan_id")
     plans_apply.add_argument("--confirm", default="", help="dla zmian stanu: dokładnie EXECUTE")
+    plans_remote = plans_sub.add_parser("remote", help="plany operacyjne z Subactor Control")
+    plans_remote.add_argument("--status", default="")
+
+    status = sub.add_parser("status", help="status autonomii z Subactor Control")
+    status.add_argument("--json", action="store_true")
+    tickets = sub.add_parser("tickets", help="lista ticketów Planfile")
+    tickets.add_argument("--open", action="store_true")
+    tickets.add_argument("--urgent", action="store_true")
+    tickets.add_argument("--queue", default="")
+    tickets.add_argument("--state", default="")
+    tickets.add_argument("--priority", default="")
+    tickets.add_argument("--project", default="")
+    tickets.add_argument("--text", default="")
+    tickets.add_argument("--json", action="store_true")
+    sub.add_parser("health", help="publiczny health Subactor Control")
+    dispatch = sub.add_parser("dispatch", help="rozdysponuj pracę przez Control")
+    dispatch.add_argument("--confirm", default="")
+    uri = sub.add_parser("uri", help="uruchom kontrolowany proces URI")
+    uri.add_argument("uri")
+    uri.add_argument("payload", nargs="?")
+    uri.add_argument("--confirm", default="")
+    api = sub.add_parser("api", help="ograniczone wywołanie API tego samego Control origin")
+    api.add_argument("method")
+    api.add_argument("path")
+    api.add_argument("payload", nargs="?")
+    api.add_argument("--confirm", default="")
+    get = sub.add_parser("get", help="GET z Subactor Control")
+    get.add_argument("path")
+    post = sub.add_parser("post", help="POST do Subactor Control")
+    post.add_argument("path")
+    post.add_argument("payload", nargs="?", default="{}")
+    post.add_argument("--confirm", default="")
+    sub.add_parser("endpoints", help="katalog operacyjnego API")
 
     receipts = sub.add_parser("receipts", help="przeglądaj krótkie receipts wykonania")
     receipts_sub = receipts.add_subparsers(dest="receipts_command", required=True)
@@ -354,6 +388,11 @@ def main(argv: list[str] | None = None) -> None:
             console.print(f"Config: [cyan]{config_path}[/cyan] mode={_mode(config_path)}")
             console.print(f"Dane:   [cyan]{data_dir}[/cyan] mode={_mode(data_dir)}")
             return
+
+        operational = {"status", "tickets", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
+        if command in operational or (command == "plans" and args.plans_command == "remote"):
+            client = OperationsClient(OperationSettings.from_environment())
+            raise SystemExit(run_operational_command(args, console, client))
 
         config, store, chat = _build_services(args)
         if command == "chat":
