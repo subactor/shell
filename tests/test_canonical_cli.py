@@ -3,7 +3,7 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from subactor_shell.app import build_parser, canonical_chat_provider, command_name
+from subactor_shell.app import build_parser
 from subactor_shell.terminal import (
     canonical_ticket_links,
     terminal_hyperlinks_enabled,
@@ -11,18 +11,13 @@ from subactor_shell.terminal import (
 )
 
 
-def test_public_entry_points_resolve_to_the_same_shell() -> None:
+def test_public_entry_point_does_not_shadow_founder_chat() -> None:
     project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert project["scripts"] == {
-        "subactor": "subactor_shell.app:main",
         "subactor-shell": "subactor_shell.app:main",
     }
-    assert command_name("/usr/local/bin/subactor") == "subactor"
-    assert command_name("/usr/local/bin/subactor-shell") == "subactor-shell"
-    assert build_parser("subactor").prog == "subactor"
-    assert canonical_chat_provider("subactor", None) == "control"
-    assert canonical_chat_provider("subactor-shell", None) is None
-    assert canonical_chat_provider("subactor", "mock") == "mock"
+    assert "subactor" not in project["scripts"]
+    assert build_parser().prog == "subactor-shell"
 
 
 def test_ticket_links_are_canonical_bounded_and_reject_unsafe_origins() -> None:
