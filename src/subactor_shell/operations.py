@@ -82,16 +82,14 @@ class OperationSettings:
     @classmethod
     def from_environment(cls, env: Mapping[str, str] | None = None) -> "OperationSettings":
         values = os.environ if env is None else env
-        return cls(
-            control_url=_validated_origin(
-                values.get("SUBACTOR_CONTROL_URL", "http://127.0.0.1:8091"), "SUBACTOR_CONTROL_URL"
-            ),
-            planfile_url=_validated_origin(
-                values.get("SUBACTOR_PLANFILE_URL", values.get("PLANFILE_URL", "http://127.0.0.1:8765")),
-                "SUBACTOR_PLANFILE_URL",
-            ),
-            token=_read_token(values),
+        control_url = _validated_origin(
+            values.get("SUBACTOR_CONTROL_URL", "http://127.0.0.1:8091"), "SUBACTOR_CONTROL_URL"
         )
+        planfile_url = _validated_origin(
+            values.get("SUBACTOR_PLANFILE_URL", values.get("PLANFILE_URL", "http://127.0.0.1:8765")),
+            "SUBACTOR_PLANFILE_URL",
+        )
+        return cls(control_url, planfile_url, _read_token(values))
 
 
 class OperationsClient:
@@ -282,4 +280,3 @@ def run_operational_command(args: Any, console: Console, client: OperationsClien
         console.print(_ENDPOINTS, markup=False)
         return 0
     raise OperationsError(f"Nieobsługiwana komenda operacyjna: {command}")
-
