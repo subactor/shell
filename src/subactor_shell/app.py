@@ -233,17 +233,19 @@ def _doctor(config, store: Store, chat: ChatService, console: Console) -> int:
     add("Vault HTTP", vault_ok, vault_details)
 
     try:
-        control = SubactorControlClient(config.control, chat.resolver)
-        control_ok, control_details = control.health()
-        add("Subactor Control", control_ok, control_details)
-        if control_ok:
-            try:
-                names = [str(item.get("name")) for item in control.list_tools(strict=True)]
-                add("MCP boundary", True, ", ".join(sorted(names)))
-            except Exception as exc:
-                add("MCP boundary", False, str(exc))
+        operations = OperationsClient(OperationSettings.from_environment())
+        health, _ = operations.request("GET", "/health", authenticated=False)
+        control_ok = isinstance(health, dict) and health.get("ok") is True
+        add("Subactor Control", control_ok, "ok=true" if control_ok else "nieprawidłowy health payload")
     except Exception as exc:
         add("Subactor Control", False, str(exc))
+
+    try:
+        control = SubactorControlClient(config.control, chat.resolver)
+        names = [str(item.get("name")) for item in control.list_tools(strict=True)]
+        add("MCP boundary", True, ", ".join(sorted(names)))
+    except Exception as exc:
+        add("MCP boundary", False, str(exc))
 
     console.print(table)
     console.print("Diagnostyka nie odczytuje ani nie drukuje wartości sekretów.")
