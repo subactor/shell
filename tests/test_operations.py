@@ -40,8 +40,8 @@ def client(handler, *, bearer="test-value"):
     return OperationsClient(settings, transport=httpx.MockTransport(handler))
 
 
-def test_parser_exposes_canonical_operational_surface() -> None:
-    parser = build_parser("subactor")
+def test_parser_exposes_bounded_operational_surface() -> None:
+    parser = build_parser()
     assert parser.parse_args(["status"]).command == "status"
     assert parser.parse_args(["tickets", "--open", "--queue", "coding-agent"]).open is True
     assert parser.parse_args(["plans", "remote", "--status", "active"]).plans_command == "remote"

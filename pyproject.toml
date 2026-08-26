@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "subactor-shell"
-version = "0.2.1"
+version = "0.2.2"
 description = "Subactor terminal shell with IntentIR orchestration, governed Control integration, persistent sessions and ACP stdio."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,7 +21,6 @@ dependencies = [
 dev = ["pytest>=8,<10", "pytest-asyncio>=0.23,<1"]
 
 [project.scripts]
-subactor = "subactor_shell.app:main"
 subactor-shell = "subactor_shell.app:main"
 
 [tool.setuptools.packages.find]
