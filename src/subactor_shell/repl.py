@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 import getpass
 import json
@@ -17,6 +18,7 @@ from rich.text import Text
 from .chat import ChatError, ChatService
 from .control import ControlError, SubactorControlClient
 from .models import Session
+from .operations import OperationSettings, OperationsClient, OperationsError, run_operational_command
 from .orchestration import OrchestrationError
 from .terminal import terminal_hyperlinks_enabled, ticket_link_lines
 
@@ -58,6 +60,8 @@ HELP = """[bold]Rozmowa[/bold]
 
 [bold]Subactor Control[/bold]
   /status                      wywołaj cli.status
+  /orgs [zasób]                rejestry organizacji (dashboard lub lista)
+  /projects [recon]            portfolio projektów lub reconciliation
   /control tools               sprawdź zamkniętą granicę MCP
   /control call TOOL JSON      wywołaj cli.status/plan/execute
 
@@ -112,7 +116,7 @@ class ShellRepl:
                         return
                 else:
                     await self._send(line)
-            except (ChatError, ControlError, OrchestrationError, ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
+            except (ChatError, ControlError, OperationsError, OrchestrationError, ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
                 self.console.print(f"[red]Błąd:[/red] {exc}")
 
     def _prompt_text(self) -> str:
@@ -246,6 +250,12 @@ class ShellRepl:
             return True
         if command == "/status":
             await self._send("pokaż status subactora")
+            return True
+        if command == "/orgs":
+            await self._run_operational("orgs", args)
+            return True
+        if command == "/projects":
+            await self._run_operational("projects", args)
             return True
         if command == "/control":
             await self._handle_control(args)
@@ -381,6 +391,23 @@ class ShellRepl:
             self.console.print(Text(token))
         else:
             raise ValueError("Użyj /vault bind|put|grant|list|unbind|wrap")
+
+    async def _run_operational(self, command: str, args: list[str]) -> None:
+        if command == "orgs":
+            namespace = argparse.Namespace(command="orgs", resource=args[0] if args else "", json=False)
+        elif command == "projects":
+            recon = bool(args) and args[0].lower() in {"recon", "reconciliation", "--recon"}
+            namespace = argparse.Namespace(command="projects", recon=recon, json=False)
+        else:
+            raise ValueError(f"Nieobsługiwana komenda operacyjna: {command}")
+
+        def run() -> int:
+            client = OperationsClient(OperationSettings.from_environment())
+            return run_operational_command(namespace, self.console, client)
+
+        code = await asyncio.to_thread(run)
+        if code != 0:
+            raise OperationsError(f"Komenda {command} zakończyła się kodem {code}")
 
     async def _handle_control(self, args: list[str]) -> None:
         self._require(args, 1, "/control tools|call ...")

@@ -108,6 +108,12 @@ def build_parser() -> argparse.ArgumentParser:
     tickets.add_argument("--project", default="")
     tickets.add_argument("--text", default="")
     tickets.add_argument("--json", action="store_true")
+    orgs = sub.add_parser("orgs", help="rejestry organizacji (dashboard lub lista zasobu)")
+    orgs.add_argument("resource", nargs="?", default="", help="np. organizations, contacts")
+    orgs.add_argument("--json", action="store_true")
+    projects = sub.add_parser("projects", help="portfolio projektów lub reconciliation")
+    projects.add_argument("--recon", action="store_true", help="widok /api/projects/reconciliation")
+    projects.add_argument("--json", action="store_true")
     sub.add_parser("health", help="publiczny health Subactor Control")
     dispatch = sub.add_parser("dispatch", help="rozdysponuj pracę przez Control")
     dispatch.add_argument("--confirm", default="")
@@ -382,7 +388,7 @@ def main(argv: list[str] | None = None) -> None:
 
         apply_control_environment()
 
-        operational = {"status", "tickets", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
+        operational = {"status", "tickets", "orgs", "projects", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
         if command in operational or (command == "plans" and args.plans_command == "remote"):
             client = OperationsClient(OperationSettings.from_environment())
             raise SystemExit(run_operational_command(args, console, client))

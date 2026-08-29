@@ -37,9 +37,14 @@ POST /api/processes/run
 subactor health
 subactor status
 subactor tickets --open
+subactor orgs [resource]
+subactor projects [--recon]
 subactor plans remote
 subactor uri <uri-process> [json-payload]
 subactor get /api/system/dashboard
+subactor get /api/org/dashboard
+subactor get /api/org/projects?limit=200
+subactor get /api/projects/reconciliation
 subactor post /api/delegation/dispatch '{}' --confirm EXECUTE
 subactor api GET|POST|PUT|PATCH|DELETE <path> [json-body]
 """
@@ -205,6 +210,88 @@ def _print_json(console: Console, payload: Any) -> None:
     console.print_json(json.dumps(payload, ensure_ascii=False))
 
 
+_ORG_COLUMNS = ("name", "title", "subject", "email", "status", "owner_email", "updated_at", "id")
+
+
+def _org_table_columns(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    all_keys = {key for row in rows for key in row}
+    preferred = [key for key in _ORG_COLUMNS if key in all_keys]
+    extra = [key for key in sorted(all_keys) if key not in preferred and key not in {"created_by", "updated_by", "archived_at"}]
+    return (preferred + extra)[:6]
+
+
+def _print_orgs_dashboard(console: Console, payload: Mapping[str, Any]) -> None:
+    dashboard = payload.get("dashboard") if isinstance(payload.get("dashboard"), dict) else {}
+    counts = dashboard.get("counts") if isinstance(dashboard.get("counts"), dict) else {}
+    table = Table("Zasób", "Rekordów")
+    for key, value in sorted(counts.items(), key=lambda item: str(item[0])):
+        table.add_row(str(key), str(value))
+    console.print(f"{len(counts)} rejestr(ów) organizacji")
+    console.print(table)
+
+
+def _print_org_resource(console: Console, resource: str, rows: Sequence[Mapping[str, Any]]) -> None:
+    if not rows:
+        console.print(f"Brak rekordów w zasobie {resource}.")
+        return
+    columns = _org_table_columns(rows)
+    table = Table(*columns)
+    for item in rows[:50]:
+        table.add_row(
+            *[
+                str(item.get(column, ""))[:80]
+                if not isinstance(item.get(column), (dict, list))
+                else json.dumps(item.get(column), ensure_ascii=False)[:80]
+                for column in columns
+            ]
+        )
+    console.print(f"{len(rows)} rekord(ów) w {resource}")
+    console.print(table)
+
+
+def _print_projects_portfolio(console: Console, rows: Sequence[Mapping[str, Any]]) -> None:
+    table = Table("ID", "Nazwa", "Klient", "Status", "Typ")
+    for item in rows[:50]:
+        table.add_row(
+            str(item.get("id", "?")),
+            str(item.get("name", ""))[:60],
+            str(item.get("client_name", ""))[:30],
+            str(item.get("status", "")),
+            str(item.get("project_type", "")),
+        )
+    console.print(f"{len(rows)} projekt(ów)")
+    console.print(table)
+
+
+def _print_projects_reconciliation(console: Console, rows: Sequence[Mapping[str, Any]]) -> None:
+    table = Table("Projekt", "Domena", "Stan", "Blokery")
+    for item in rows[:50]:
+        blockers = item.get("blockers", [])
+        blocker_text = ", ".join(str(value) for value in blockers) if isinstance(blockers, list) else str(blockers)
+        desired = item.get("desired") if isinstance(item.get("desired"), dict) else {}
+        domain = str(desired.get("domain") or item.get("domain") or "")
+        table.add_row(
+            str(item.get("project_id") or item.get("id") or "?"),
+            domain[:40],
+            str(item.get("state") or item.get("status") or "?"),
+            blocker_text[:80],
+        )
+    console.print(f"{len(rows)} projekt(ów) reconciliation")
+    console.print(table)
+
+
+def _projects_from_reconciliation(payload: Any) -> list[Mapping[str, Any]]:
+    if not isinstance(payload, dict):
+        return []
+    projects = payload.get("projects")
+    if isinstance(projects, list):
+        return [item for item in projects if isinstance(item, dict)]
+    reconciliation = payload.get("reconciliation")
+    if isinstance(reconciliation, dict) and isinstance(reconciliation.get("projects"), list):
+        return [item for item in reconciliation["projects"] if isinstance(item, dict)]
+    return []
+
+
 def _print_tickets(console: Console, rows: Sequence[Mapping[str, Any]], control_url: str) -> None:
     table = Table("Ticket", "Priorytet", "Status", "Kolejka", "Stan", "Nazwa")
     hyperlinks = terminal_hyperlinks_enabled(is_terminal=console.is_terminal)
@@ -242,6 +329,40 @@ def run_operational_command(args: Any, console: Console, client: OperationsClien
         rows = payload if isinstance(payload, list) else payload.get("tickets", [])
         filtered = filter_tickets([item for item in rows if isinstance(item, dict)], args)
         _print_json(console, filtered) if args.json else _print_tickets(console, filtered, client.settings.control_url)
+        return 0
+    if command == "orgs":
+        resource = str(getattr(args, "resource", "") or "").strip()
+        if resource:
+            payload, _ = client.request("GET", f"/api/org/{resource}?limit=100")
+            rows = payload.get("rows", []) if isinstance(payload, dict) else []
+            filtered = [item for item in rows if isinstance(item, dict)]
+            if args.json:
+                _print_json(console, payload)
+            else:
+                _print_org_resource(console, resource, filtered)
+        else:
+            payload, _ = client.request("GET", "/api/org/dashboard")
+            if args.json:
+                _print_json(console, payload)
+            else:
+                _print_orgs_dashboard(console, payload if isinstance(payload, dict) else {})
+        return 0
+    if command == "projects":
+        if bool(getattr(args, "recon", False)):
+            payload, _ = client.request("GET", "/api/projects/reconciliation")
+            rows = _projects_from_reconciliation(payload)
+            if args.json:
+                _print_json(console, payload)
+            else:
+                _print_projects_reconciliation(console, rows)
+        else:
+            payload, _ = client.request("GET", "/api/org/projects?limit=200")
+            rows = payload.get("rows", []) if isinstance(payload, dict) else []
+            filtered = [item for item in rows if isinstance(item, dict)]
+            if args.json:
+                _print_json(console, payload)
+            else:
+                _print_projects_portfolio(console, filtered)
         return 0
     if command == "plans":
         payload, _ = client.request("GET", "/api/plans?view=summary")

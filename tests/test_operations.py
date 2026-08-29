@@ -31,6 +31,8 @@ def args(**values):
         "confirm": "",
         "payload": None,
         "status": "",
+        "resource": "",
+        "recon": False,
     }
     return argparse.Namespace(**(defaults | values))
 
@@ -44,6 +46,9 @@ def test_parser_exposes_bounded_operational_surface() -> None:
     parser = build_parser()
     assert parser.parse_args(["status"]).command == "status"
     assert parser.parse_args(["tickets", "--open", "--queue", "coding-agent"]).open is True
+    assert parser.parse_args(["orgs"]).command == "orgs"
+    assert parser.parse_args(["orgs", "organizations"]).resource == "organizations"
+    assert parser.parse_args(["projects", "--recon"]).recon is True
     assert parser.parse_args(["plans", "remote", "--status", "active"]).plans_command == "remote"
     assert parser.parse_args(["uri", "planfile://tickets/query/list"]).command == "uri"
 
@@ -115,3 +120,48 @@ def test_writes_require_explicit_execute_confirmation() -> None:
         run_operational_command(
             args(command="api", method="DELETE", path="/api/tokens/1"), Console(), client(handler)
         )
+
+
+def test_orgs_dashboard_renders_resource_counts() -> None:
+    def handler(request):
+        assert str(request.url) == "http://control.test/api/org/dashboard"
+        return httpx.Response(
+            200,
+            json={"dashboard": {"counts": {"organizations": 2, "contacts": 5}}},
+        )
+
+    command = args(command="orgs")
+    assert run_operational_command(command, Console(file=None, force_terminal=False), client(handler)) == 0
+
+
+def test_orgs_resource_lists_rows() -> None:
+    def handler(request):
+        assert str(request.url) == "http://control.test/api/org/organizations?limit=100"
+        return httpx.Response(200, json={"rows": [{"id": "org-1", "name": "Subactor"}]})
+
+    command = args(command="orgs", resource="organizations")
+    assert run_operational_command(command, Console(file=None, force_terminal=False), client(handler)) == 0
+
+
+def test_projects_portfolio_uses_org_projects() -> None:
+    def handler(request):
+        assert str(request.url) == "http://control.test/api/org/projects?limit=200"
+        return httpx.Response(
+            200,
+            json={"rows": [{"id": "demo", "name": "Demo", "client_name": "ACME", "status": "active"}]},
+        )
+
+    command = args(command="projects", recon=False)
+    assert run_operational_command(command, Console(file=None, force_terminal=False), client(handler)) == 0
+
+
+def test_projects_recon_uses_reconciliation_endpoint() -> None:
+    def handler(request):
+        assert str(request.url) == "http://control.test/api/projects/reconciliation"
+        return httpx.Response(
+            200,
+            json={"projects": [{"project_id": "demo", "state": "blocked", "blockers": ["dns_not_ready"]}]},
+        )
+
+    command = args(command="projects", recon=True)
+    assert run_operational_command(command, Console(file=None, force_terminal=False), client(handler)) == 0
