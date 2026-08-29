@@ -1,0 +1,13 @@
+{
+  "schema": "subactor.shell.install/v1",
+  "version": "0.2.2",
+  "tag": "v0.2.2",
+  "published_at": "2026-08-29T00:00:00+00:00",
+  "assets": {
+    "wheel": {
+      "filename": "subactor_shell-0.2.2-py3-none-any.whl",
+      "url": "https://github.com/subactor/shell/releases/download/v0.2.2/subactor_shell-0.2.2-py3-none-any.whl",
+      "sha256": "11657dfdf72bdfbfad51142738a67501d8a450b160c82c3f4a75d5cd0ebcbb0e"
+    }
+  }
+}

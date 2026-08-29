@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subactor Shell</title>
+    <meta
+      name="description"
+      content="Install Subactor Shell — persistent terminal orchestration layer for Subactor."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1020;
+        --card: #121a2f;
+        --text: #e8eefc;
+        --muted: #9fb0d3;
+        --accent: #5ad1ff;
+        --code: #0f172a;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f8fc;
+          --card: #ffffff;
+          --text: #0f172a;
+          --muted: #475569;
+          --accent: #0369a1;
+          --code: #e2e8f0;
+        }
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 0.25rem;
+      }
+      p.lead {
+        color: var(--muted);
+        font-size: 1.05rem;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
+        border-radius: 14px;
+        padding: 1.25rem 1.35rem;
+        margin: 1.25rem 0;
+      }
+      h2 {
+        margin-top: 0;
+        font-size: 1.1rem;
+      }
+      pre {
+        background: var(--code);
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        overflow-x: auto;
+        font-size: 0.92rem;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      a {
+        color: var(--accent);
+      }
+      ul {
+        padding-left: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Subactor Shell</h1>
+      <p class="lead">
+        Persistent terminal orchestration for Subactor — IntentIR routing, governed
+        Control integration, sessions, Vault references and ACP stdio.
+      </p>
+
+      <section>
+        <h2>Installing and running Subactor Shell</h2>
+        <p>Run the following on Mac or Linux:</p>
+        <pre><code>curl -fsSL https://subactor.github.io/shell/install.sh | sh</code></pre>
+        <p>Run the following on Windows:</p>
+        <pre><code>powershell -ExecutionPolicy ByPass -c "irm https://subactor.github.io/shell/install.ps1 | iex"</code></pre>
+        <p>
+          The standalone installers download release metadata from
+          <code>subactor.github.io/shell</code> by default and fall back to
+          <a href="https://github.com/subactor/shell/releases">GitHub Releases</a>
+          when metadata or assets are unavailable. To force GitHub Releases:
+        </p>
+        <pre><code>curl -fsSL https://subactor.github.io/shell/install.sh | SUBACTOR_SHELL_INSTALLER_USE_GITHUB_IO=false sh</code></pre>
+        <pre><code>$env:SUBACTOR_SHELL_INSTALLER_USE_GITHUB_IO='false'; irm https://subactor.github.io/shell/install.ps1 | iex</code></pre>
+      </section>
+
+      <section>
+        <h2>After install</h2>
+        <pre><code>subactor-shell init
+subactor-shell chat</code></pre>
+        <p>
+          Requires Python 3.11+. The installer creates an isolated virtualenv under
+          <code>~/.local/share/subactor-shell/venv</code> and links
+          <code>subactor-shell</code> into <code>~/.local/bin</code>.
+        </p>
+      </section>
+
+      <section>
+        <h2>Links</h2>
+        <ul>
+          <li><a href="https://github.com/subactor/shell">GitHub repository</a></li>
+          <li><a href="https://github.com/subactor/shell/releases">Releases</a></li>
+          <li><a href="channels/latest.json">Latest release metadata</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

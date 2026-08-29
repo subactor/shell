@@ -48,6 +48,40 @@ Pełny transcript nadal jest zapisywany w SQLite, ale provider rozmowy dostaje t
 
 ## Instalacja
 
+### Jednolinijkowy instalator (zalecane)
+
+Mac / Linux:
+
+```bash
+curl -fsSL https://subactor.github.io/shell/install.sh | sh
+```
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://subactor.github.io/shell/install.ps1 | iex"
+```
+
+Instalator domyślnie pobiera metadane z
+[`subactor.github.io/shell`](https://subactor.github.io/shell/) i w razie
+problemu przechodzi na
+[GitHub Releases](https://github.com/subactor/shell/releases). Aby wymusić
+GitHub Releases:
+
+```bash
+curl -fsSL https://subactor.github.io/shell/install.sh | SUBACTOR_SHELL_INSTALLER_USE_GITHUB_IO=false sh
+```
+
+```powershell
+$env:SUBACTOR_SHELL_INSTALLER_USE_GITHUB_IO='false'; irm https://subactor.github.io/shell/install.ps1 | iex
+```
+
+Wymagania: Python 3.11+. Instalator tworzy izolowane środowisko w
+`~/.local/share/subactor-shell/venv` i linkuje `subactor-shell` do
+`~/.local/bin`.
+
+### Z wheel lub źródeł
+
 Pakiet instaluje wyłącznie polecenie `subactor-shell`. Nazwa `subactor` jest
 zarezerwowana dla Founder Chat dostarczanego przez Platformę, dzięki czemu
 `subactor chat` zachowuje swój interfejs, pełną diagnostykę i kontrakt sesji.
