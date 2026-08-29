@@ -48,6 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     one.add_argument("--model", help="model dla nowej sesji")
     one.add_argument("--attach", action="append", type=Path, default=[])
     one.add_argument("--grant", action="append", default=[], help="jednorazowy grant aliasu sekretu")
+    one.add_argument("--json", action="store_true", help="emituj ustrukturyzowaną odpowiedź w formacie JSON")
 
     data = sub.add_parser("data", help="zapisuj jawne dane tekstowe i pliki")
     data_sub = data.add_subparsers(dest="data_command", required=True)
@@ -175,16 +176,36 @@ async def _one(chat: ChatService, args: argparse.Namespace, console: Console) ->
     session = chat.get_or_create_session(args.session, provider=args.provider, model=args.model)
     for alias in args.grant:
         chat.grant_secret(alias)
+    is_json = bool(getattr(args, "json", False))
+    chunks: list[str] = []
     async for chunk in chat.stream_message(session.id, args.message, attachment_paths=args.attach):
-        console.print(chunk, end="", markup=False, soft_wrap=True)
+        chunks.append(chunk)
+        if not is_json:
+            console.print(chunk, end="", markup=False, soft_wrap=True)
+
+    route = chat.store.last_routing_decision(session.id)
+    if is_json:
+        receipt = None
+        receipts = chat.store.list_execution_receipts(session.id)
+        if receipts:
+            receipt = receipts[0]
+        payload = {
+            "session_id": session.id,
+            "text": "".join(chunks),
+            "route": route,
+            "receipt": receipt,
+        }
+        console.print_json(json.dumps(payload, ensure_ascii=False))
+        return 0
+
     console.print()
     console.print(f"[dim]session={session.id}[/dim]")
-    route = chat.store.last_routing_decision(session.id)
     if route and bool(chat.config.orchestration.get("show_route", False)):
         console.print(
             f"[dim]route={route['route']} intent={route['intent_id']} confidence={route['confidence']:.3f}[/dim]"
         )
     return 0
+
 
 
 def _doctor(config, store: Store, chat: ChatService, console: Console) -> int:

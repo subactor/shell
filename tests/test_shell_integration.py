@@ -50,3 +50,39 @@ def test_subactor_status_connector_uses_fixed_argv(tmp_path: Path):
     assert result["source"] == "subactor-cli"
     assert "operation=cli.status exit=0" in result["message"]
     assert "services=15/15 autonomy_ready=false" in result["message"]
+
+
+def test_one_command_json_output(tmp_path: Path):
+    import argparse
+    import json
+    from io import StringIO
+    from rich.console import Console
+    from subactor_shell.app import _one
+    from subactor_shell.chat import ChatService
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[defaults]\nprovider = "mock"\nmodel = "mock"\n', encoding="utf-8")
+    config = load_config(config_path, tmp_path / "data")
+    store = Store(config.data_dir / "state.sqlite3")
+    chat = ChatService(config, store)
+
+    out = StringIO()
+    console = Console(file=out, no_color=True, width=120)
+    args = argparse.Namespace(
+        session=None,
+        provider="mock",
+        model="mock",
+        grant=[],
+        message="pokaż sesje",
+        attach=[],
+        json=True,
+    )
+    code = asyncio.run(_one(chat, args, console))
+    assert code == 0
+    raw = out.getvalue().strip()
+    data = json.loads(raw)
+    assert "session_id" in data
+    assert "route" in data
+    assert data["route"]["intent_id"] == "session.list"
+    assert "receipt" in data
+    assert data["receipt"]["ok"] is True
