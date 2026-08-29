@@ -116,3 +116,22 @@ def test_store_migrates_v01_tables_without_losing_existing_rows(tmp_path: Path):
     assert migrated.get_secret_binding("TOKEN") == "vault://secret/app#token"
     assert migrated.usage_summary("legacy")["calls"] == 0
     assert migrated.list_execution_plans("legacy") == []
+
+
+def test_delete_and_prune_sessions(tmp_path: Path):
+    store = Store(tmp_path / "state.sqlite3")
+    s1 = store.create_session("s1", "mock", "mock")
+    s2 = store.create_session("s2", "mock", "mock")
+    s3 = store.create_session("s3", "mock", "mock")
+    store.add_message(s1.id, "user", "hi", "hi", {})
+
+    # Delete specific session
+    assert store.delete_session(s3.id) is True
+    assert store.get_session(s3.id) is None
+    assert store.delete_session("non-existent") is False
+
+    # Prune empty sessions
+    assert store.prune_sessions(empty_only=True) == 1  # s2 was empty
+    assert store.get_session(s2.id) is None
+    assert store.get_session(s1.id) is not None
+

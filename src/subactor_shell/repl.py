@@ -25,7 +25,8 @@ from .terminal import terminal_hyperlinks_enabled, ticket_link_lines
 
 HELP = """[bold]Rozmowa[/bold]
   /new [nazwa]                 nowa sesja
-  /sessions                    lista sesji
+  /sessions [del ID|prune]     lista, usunięcie lub czyszczenie starych sesji
+
   /resume ID                   wznowienie sesji
   /provider NAZWA              zmiana profilu providera
   /model MODEL                 zmiana modelu w sesji
@@ -142,8 +143,21 @@ class ShellRepl:
             self.console.print(f"Nowa sesja: [cyan]{self.session.id}[/cyan]")
             return True
         if command == "/sessions":
+            if args and args[0] in {"del", "delete", "rm"}:
+                self._require(args, 2, "/sessions del ID")
+                target_session = self._resolve_session(args[1])
+                if target_session.id == self.session.id:
+                    raise ValueError("Nie można usunąć bieżącej aktywnej sesji. Utwórz nową (/new) przed usunięciem.")
+                self.chat.store.delete_session(target_session.id)
+                self.console.print(f"Usunięto sesję [cyan]{target_session.id}[/cyan].")
+                return True
+            if args and args[0] == "prune":
+                count = self.chat.store.prune_sessions(older_than_days=30)
+                self.console.print(f"Wyczyszczono [cyan]{count}[/cyan] starych sesji.")
+                return True
             self._print_sessions()
             return True
+
         if command == "/resume":
             self._require(args, 1, "/resume ID")
             self.session = self._resolve_session(args[0])

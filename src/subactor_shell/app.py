@@ -77,8 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
     vault_wrap.add_argument("alias")
     vault_wrap.add_argument("--ttl", default="5m")
 
-    sessions = sub.add_parser("sessions", help="lista zapisanych sesji")
-    sessions.add_argument("--json", action="store_true")
+    sessions = sub.add_parser("sessions", help="zarządzanie sesjami (lista, usuwanie, czyszczenie)")
+    sessions.add_argument("--json", action="store_true", help="zwróć listę sesji jako JSON")
+    sessions.add_argument("--delete", metavar="SESSION_ID", help="usuń wskazaną sesję")
+    sessions.add_argument("--prune", action="store_true", help="usuń nieaktywne lub puste sesje")
+    sessions.add_argument("--older-than-days", type=int, default=30, help="próg wieku dla --prune (domyślnie 30 dni)")
+    sessions.add_argument("--empty-only", action="store_true", help="usuń tylko puste sesje bez wiadomości")
 
     export = sub.add_parser("export", help="eksport sesji do JSON")
     export.add_argument("session")
@@ -406,6 +410,17 @@ def main(argv: list[str] | None = None) -> None:
         elif command == "vault":
             raise SystemExit(_vault_command(chat, args, console))
         elif command == "sessions":
+            if getattr(args, "delete", None):
+                removed = store.delete_session(args.delete)
+                console.print(f"Usunięto sesję [cyan]{args.delete}[/cyan]." if removed else f"Nie znaleziono sesji {args.delete}.")
+                raise SystemExit(0 if removed else 1)
+            if getattr(args, "prune", False):
+                count = store.prune_sessions(
+                    older_than_days=args.older_than_days,
+                    empty_only=args.empty_only,
+                )
+                console.print(f"Wyczyszczono [cyan]{count}[/cyan] sesji.")
+                raise SystemExit(0)
             sessions = store.list_sessions()
             if args.json:
                 console.print_json(
@@ -429,6 +444,7 @@ def main(argv: list[str] | None = None) -> None:
                 for item in sessions:
                     table.add_row(item.id, item.name, item.provider, item.model, item.updated_at)
                 console.print(table)
+
         elif command == "export":
             payload = store.export_session(args.session)
             output = args.output.expanduser()

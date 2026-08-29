@@ -45,3 +45,15 @@ def test_terminal_link_style_requires_supported_tty_and_honors_opt_out() -> None
     plain = ticket_link_lines("PLF-8348", "https://founder.example.test", hyperlinks=False)[0]
     assert any(str(span.style).startswith("link https://") for span in linked.spans)
     assert all(not str(span.style).startswith("link ") for span in plain.spans)
+
+
+def test_sessions_cli_arguments() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["sessions", "--delete", "sess-123"])
+    assert args.delete == "sess-123"
+
+    prune_args = parser.parse_args(["sessions", "--prune", "--older-than-days", "14", "--empty-only"])
+    assert prune_args.prune is True
+    assert prune_args.older_than_days == 14
+    assert prune_args.empty_only is True
+

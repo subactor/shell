@@ -189,6 +189,33 @@ class Store:
             ).fetchall()
         return [self._row_to_session(row) for row in rows]
 
+    def delete_session(self, session_id: str) -> bool:
+        with self._connect() as db:
+            cur = db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            return cur.rowcount > 0
+
+    def prune_sessions(self, *, older_than_days: int = 30, empty_only: bool = False) -> int:
+        from datetime import datetime, timezone, timedelta
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=older_than_days)).isoformat()
+        with self._connect() as db:
+            if empty_only:
+                cur = db.execute(
+                    """
+                    DELETE FROM sessions
+                    WHERE id NOT IN (SELECT DISTINCT session_id FROM messages)
+                    """
+                )
+            else:
+                cur = db.execute(
+                    """
+                    DELETE FROM sessions
+                    WHERE updated_at < ?
+                    """,
+                    (cutoff,),
+                )
+            return cur.rowcount
+
     def update_session(
         self,
         session_id: str,
@@ -216,6 +243,7 @@ class Store:
         updated = self.get_session(session_id)
         assert updated is not None
         return updated
+
 
     def add_message(
         self,
