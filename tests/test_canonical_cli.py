@@ -57,3 +57,28 @@ def test_sessions_cli_arguments() -> None:
     assert prune_args.older_than_days == 14
     assert prune_args.empty_only is True
 
+
+def test_builtin_control_intents_and_subactor_cli_operations() -> None:
+    from subactor_shell.catalog import builtin_intents
+    from subactor_shell.config import load_config
+    from subactor_shell.connectors import ConnectorRegistry
+
+    intents = {item.id: item for item in builtin_intents()}
+    for intent_id in ["control.status", "control.tickets", "control.projects", "control.registries", "control.watch"]:
+        assert intent_id in intents
+        assert intents[intent_id].execution["connector"] == "subactor_cli"
+
+    config = load_config(Path("/dev/null"), Path("/tmp/subactor-test-shell-data"))
+    registry = ConnectorRegistry(config)
+    cli_def = registry.get("subactor_cli")
+
+    assert cli_def is not None
+    assert set(cli_def.allowed_operations) == {
+        "cli.status",
+        "cli.tickets",
+        "cli.projects",
+        "cli.registries",
+        "cli.watch",
+    }
+
+

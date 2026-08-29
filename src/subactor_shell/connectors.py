@@ -112,9 +112,16 @@ class ConnectorRegistry:
             "subactor_cli": ConnectorDefinition(
                 name="subactor_cli",
                 kind="subactor_cli",
-                allowed_operations=["cli.status"],
+                allowed_operations=[
+                    "cli.status",
+                    "cli.tickets",
+                    "cli.projects",
+                    "cli.registries",
+                    "cli.watch",
+                ],
                 effect="read",
             ),
+
         }
         for name, raw in config.connectors.items():
             if not isinstance(raw, dict):
@@ -293,8 +300,16 @@ class ConnectorExecutor:
         raise ConnectorError(f"Nieobsługiwany connector kind: {definition.kind}")
 
     async def _subactor_cli(self, operation: str) -> dict[str, Any]:
-        if operation != "cli.status":
+        cli_commands: dict[str, list[str]] = {
+            "cli.status": ["status"],
+            "cli.tickets": ["tickets"],
+            "cli.projects": ["projects"],
+            "cli.registries": ["registries"],
+            "cli.watch": ["watch", "--once"],
+        }
+        if operation not in cli_commands:
             raise ConnectorError(f"Nieznana operacja Subactor CLI: {operation}")
+        cmd_args = cli_commands[operation]
         configured = str(self.config.control.get("cli_path", "")).strip()
         discovered = configured or shutil.which("subactor") or ""
         executable = Path(discovered).expanduser()
@@ -319,7 +334,7 @@ class ConnectorExecutor:
         env = {name: value for name, value in os.environ.items() if name in allowed_env}
         process = await asyncio.create_subprocess_exec(
             str(executable),
-            "status",
+            *cmd_args,
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -343,11 +358,12 @@ class ConnectorExecutor:
         occurred_at = datetime.now().astimezone().isoformat(timespec="seconds")
         return {
             "message": (
-                f"[{occurred_at}] source=subactor-cli operation=cli.status exit=0\n{output}"
+                f"[{occurred_at}] source=subactor-cli operation={operation} exit=0\n{output}"
             ),
             "occurred_at": occurred_at,
             "source": "subactor-cli",
         }
+
 
     def _builtin(self, operation: str, args: dict[str, Any], session_id: str) -> Any:
         if operation == "bridge.help":

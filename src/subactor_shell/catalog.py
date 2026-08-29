@@ -264,6 +264,84 @@ def builtin_intents() -> list[IntentDefinition]:
             },
         ),
         IntentDefinition(
+            id="control.tickets",
+            description="Pokaż otwarte tickety w Planfile przez cli.tickets.",
+            phrases=[
+                "pokaż tickety",
+                "lista ticketów",
+                "otwarte tickety",
+                "jakie są tickety",
+                "pokaż otwarte tickety",
+                "pokaz tickety",
+                "tickety",
+                "tickets",
+            ],
+            execution={
+                "kind": "connector",
+                "connector": "subactor_cli",
+                "operation": "cli.tickets",
+                "effect": "read",
+            },
+        ),
+        IntentDefinition(
+            id="control.projects",
+            description="Pokaż portfolio projektów przez cli.projects.",
+            phrases=[
+                "pokaż projekty",
+                "lista projektów",
+                "portfolio projektów",
+                "pokaz projekty",
+                "projekty",
+                "projects",
+            ],
+            execution={
+                "kind": "connector",
+                "connector": "subactor_cli",
+                "operation": "cli.projects",
+                "effect": "read",
+            },
+        ),
+        IntentDefinition(
+            id="control.registries",
+            description="Pokaż rejestry Organization OS przez cli.registries.",
+            phrases=[
+                "pokaż rejestry",
+                "lista rejestrów",
+                "pokaz rejestry",
+                "rejestry",
+                "registries",
+                "pokaż organizacje",
+                "lista organizacji",
+                "pokaz organizacje",
+                "organizacje",
+                "organizations",
+            ],
+            execution={
+                "kind": "connector",
+                "connector": "subactor_cli",
+                "operation": "cli.registries",
+                "effect": "read",
+            },
+        ),
+        IntentDefinition(
+            id="control.watch",
+            description="Pokaż podgląd kolejek i procesów przez cli.watch.",
+            phrases=[
+                "pokaż procesy",
+                "podgląd procesów",
+                "podgląd kolejek",
+                "stan kolejek",
+                "watch",
+                "kolejki agentów",
+            ],
+            execution={
+                "kind": "connector",
+                "connector": "subactor_cli",
+                "operation": "cli.watch",
+                "effect": "read",
+            },
+        ),
+        IntentDefinition(
             id="control.plan",
             description="Utwórz plan w istniejącym Subactor Control przez cli.plan.",
             phrases=["zaplanuj {request}", "przygotuj plan {request}", "stwórz plan {request}"],
@@ -277,6 +355,7 @@ def builtin_intents() -> list[IntentDefinition]:
             },
         ),
     ]
+
 
 
 def load_intent_definitions(path: Path) -> list[IntentDefinition]:
