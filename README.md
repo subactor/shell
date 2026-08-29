@@ -1,5 +1,20 @@
 # Subactor Shell 0.2.2
 
+
+## AI Cost Tracking
+
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.2.2-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$0.06-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-9.5h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+
+- 🤖 **LLM usage:** $0.0595 (3 commits)
+- 👤 **Human dev:** ~$953 (9.5h @ $100/h, 30min dedup)
+
+Generated on 2026-08-29 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
+
+---
+
+
+
 Subactor Shell jest trwałą warstwą rozmowy i orkiestracji dla terminala oraz klientów ACP. Wersja 0.2.2 integruje pytania operacyjne z zarządzanym CLI Subactora, poprawia obsługę kończenia sesji i nie przejmuje nazwy Founder Chat.
 
 ```text
@@ -405,3 +420,8 @@ Więcej szczegółów:
 - `docs/INTEGRATION.md` — dopasowanie do aktualnej mapy repozytorium Subactor;
 - `SECURITY.md` — granice zaufania i model zagrożeń;
 - `CHANGELOG.md` — zakres wersji 0.2.0.
+
+
+## License
+
+Licensed under Apache-2.0.
