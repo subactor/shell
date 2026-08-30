@@ -67,6 +67,61 @@ model = "control"
 auth_required = true
 timeout_seconds = 90.0
 
+# Provider xAI Grok (grok-4.6 / grok-4.5)
+[providers.grok]
+kind = "openai_compat"
+base_url = "https://api.x.ai/v1"
+endpoint = "/chat/completions"
+api_key_ref = "env://XAI_API_KEY"
+auth_required = true
+model = "grok-4.6"
+max_tokens = 4096
+max_output_tokens = 1024
+structured_mode = "json_schema"
+timeout_seconds = 60.0
+input_cost_per_million = 2.0
+cached_input_cost_per_million = 0.5
+output_cost_per_million = 10.0
+
+# Provider Z.AI Direct PaaS (glm-5.3 / glm-5.3-flash)
+[providers.zai]
+kind = "openai_compat"
+base_url = "https://api.z.ai/v1"
+endpoint = "/chat/completions"
+api_key_ref = "env://ZAI_API_KEY"
+auth_required = true
+model = "glm-5.3"
+max_tokens = 4096
+max_output_tokens = 1024
+structured_mode = "json_schema"
+timeout_seconds = 60.0
+
+# Provider OpenRouter (płatny per-token fallback)
+[providers.openrouter]
+kind = "openai_compat"
+base_url = "https://openrouter.ai/api/v1"
+endpoint = "/chat/completions"
+api_key_ref = "env://OPENROUTER_API_KEY"
+auth_required = true
+model = "z-ai/glm-5.3-flash"
+max_tokens = 4096
+max_output_tokens = 1024
+structured_mode = "json_schema"
+timeout_seconds = 60.0
+
+# Provider Ollama (lokalny model offline)
+[providers.ollama]
+kind = "openai_compat"
+base_url = "http://127.0.0.1:11434/v1"
+endpoint = "/chat/completions"
+api_key_ref = ""
+auth_required = false
+model = "qwen3-coder:30b"
+max_tokens = 4096
+max_output_tokens = 1024
+structured_mode = "json_schema"
+timeout_seconds = 60.0
+
 # Przykład lokalnego endpointu OpenAI-compatible (vLLM/SGLang/llama.cpp).
 # Po uruchomieniu ustaw orchestration.local_parser_provider = "local_4b".
 [providers.local_4b]
@@ -168,6 +223,57 @@ DEFAULTS: dict[str, Any] = {
             "model": "control",
             "auth_required": True,
             "timeout_seconds": 90.0,
+        },
+        "grok": {
+            "kind": "openai_compat",
+            "base_url": "https://api.x.ai/v1",
+            "endpoint": "/chat/completions",
+            "api_key_ref": "env://XAI_API_KEY",
+            "auth_required": True,
+            "model": "grok-4.6",
+            "max_tokens": 4096,
+            "max_output_tokens": 1024,
+            "structured_mode": "json_schema",
+            "timeout_seconds": 60.0,
+            "input_cost_per_million": 2.0,
+            "cached_input_cost_per_million": 0.5,
+            "output_cost_per_million": 10.0,
+        },
+        "zai": {
+            "kind": "openai_compat",
+            "base_url": "https://api.z.ai/v1",
+            "endpoint": "/chat/completions",
+            "api_key_ref": "env://ZAI_API_KEY",
+            "auth_required": True,
+            "model": "glm-5.3",
+            "max_tokens": 4096,
+            "max_output_tokens": 1024,
+            "structured_mode": "json_schema",
+            "timeout_seconds": 60.0,
+        },
+        "openrouter": {
+            "kind": "openai_compat",
+            "base_url": "https://openrouter.ai/api/v1",
+            "endpoint": "/chat/completions",
+            "api_key_ref": "env://OPENROUTER_API_KEY",
+            "auth_required": True,
+            "model": "z-ai/glm-5.3-flash",
+            "max_tokens": 4096,
+            "max_output_tokens": 1024,
+            "structured_mode": "json_schema",
+            "timeout_seconds": 60.0,
+        },
+        "ollama": {
+            "kind": "openai_compat",
+            "base_url": "http://127.0.0.1:11434/v1",
+            "endpoint": "/chat/completions",
+            "api_key_ref": "",
+            "auth_required": False,
+            "model": "qwen3-coder:30b",
+            "max_tokens": 4096,
+            "max_output_tokens": 1024,
+            "structured_mode": "json_schema",
+            "timeout_seconds": 60.0,
         },
         "local_4b": {
             "kind": "openai_compat",
