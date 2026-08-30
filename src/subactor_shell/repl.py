@@ -96,6 +96,7 @@ class ShellRepl:
         self.prompt = PromptSession()
         self.pending_attachments: list[Path] = []
         self.control = SubactorControlClient(chat.config.control, chat.resolver)
+        self.current_menu = ""
 
     async def run(self) -> None:
         hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
@@ -118,7 +119,7 @@ class ShellRepl:
                 return
             except KeyboardInterrupt:
                 self.console.print()
-                return
+                continue
             line = line.strip()
             if not line:
                 continue
@@ -146,7 +147,8 @@ class ShellRepl:
         except ValueError:
             rel = cwd.as_posix().lstrip("/")
         path_segment = f"/{rel}" if rel and rel != "." else ""
-        return f"⚡subactor/{username}{path_segment}/{time_str}{marker}> "
+        menu_segment = f"/{self.current_menu.lstrip('/')}" if getattr(self, "current_menu", "") else ""
+        return f"⚡subactor/{username}{path_segment}/{time_str}{menu_segment}{marker}> "
 
     async def _command(self, line: str) -> bool:
         try:
