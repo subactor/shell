@@ -17,7 +17,7 @@ class SystemConfigClient:
         *,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        base_url = str(settings.get("base_url", "http://127.0.0.1:8098")).rstrip("/")
+        base_url = str(settings.get("base_url", "http://127.0.0.1:8198")).rstrip("/")
         parsed = urlsplit(base_url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
             raise ValueError("system_config.base_url jest nieprawidłowy")

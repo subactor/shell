@@ -20,6 +20,10 @@ def test_scope_account_and_source_cli_contract() -> None:
     assert (resolution.command, resolution.need, resolution.json) == ("resolve", "credential.metadata", True)
 
 
+def test_system_config_client_defaults_to_the_declared_config_listener() -> None:
+    assert SystemConfigClient({}).base_url == "http://127.0.0.1:8198"
+
+
 def test_system_config_client_uses_versioned_secret_free_projections() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/nodes/current/scopes":

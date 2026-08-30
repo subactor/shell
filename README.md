@@ -166,9 +166,12 @@ Endpoint jest jawnie konfigurowany w `~/.config/subactor-shell/config.toml`:
 
 ```toml
 [system_config]
-base_url = "http://127.0.0.1:8098"
+base_url = "http://127.0.0.1:8198"
 timeout_seconds = 5.0
 ```
+
+Port `8198` jest kanonicznym bindingiem `subactor/config`; `8098` pozostaje
+zajęty przez lokalny LLM Gateway.
 
 Wynik konta pokazuje tylko skonfigurowany podmiot, znormalizowany stan
 uwierzytelnienia oraz bezpieczne lokalizacje ustawień. Token ani surowy wynik

@@ -103,7 +103,7 @@ timeout_seconds = 10.0
 
 # Wspólny, secret-free scope node/konta z subactor/config.
 [system_config]
-base_url = "http://127.0.0.1:8098"
+base_url = "http://127.0.0.1:8198"
 timeout_seconds = 5.0
 
 # Nazwane connectory są allowlistą. Process connector nie używa shell=True;
@@ -203,7 +203,7 @@ DEFAULTS: dict[str, Any] = {
         "timeout_seconds": 10.0,
     },
     "system_config": {
-        "base_url": "http://127.0.0.1:8098",
+        "base_url": "http://127.0.0.1:8198",
         "timeout_seconds": 5.0,
     },
     "connectors": {},
