@@ -69,6 +69,7 @@ HELP = """[bold]Rozmowa[/bold]
   /status                      wywołaj cli.status
   /orgs [zasób]                rejestry organizacji (dashboard lub lista)
   /projects [recon]            portfolio projektów lub reconciliation
+  /performance                 ranking kosztu, częstotliwości, wzrostu i ROI
   /control tools               sprawdź zamkniętą granicę MCP
   /control call TOOL JSON      wywołaj cli.status/plan/execute
 
@@ -288,6 +289,9 @@ class ShellRepl:
         if command == "/projects":
             await self._run_operational("projects", args)
             return True
+        if command in {"/performance", "/perf"}:
+            await self._run_operational("performance", args)
+            return True
         if command == "/control":
             await self._handle_control(args)
             return True
@@ -429,6 +433,8 @@ class ShellRepl:
         elif command == "projects":
             recon = bool(args) and args[0].lower() in {"recon", "reconciliation", "--recon"}
             namespace = argparse.Namespace(command="projects", recon=recon, json=False)
+        elif command == "performance":
+            namespace = argparse.Namespace(command="performance", json=False)
         else:
             raise ValueError(f"Nieobsługiwana komenda operacyjna: {command}")
 

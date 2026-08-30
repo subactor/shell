@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Dodano
+
+- read-only `performance`/`perf` oraz `/performance`/`/perf`, pokazujące pięć
+  rankingów kosztu URI Process z osobno walidowanego originu Observability.
+
 ## [0.2.2] - 2026-08-29
 
 ### Docs
