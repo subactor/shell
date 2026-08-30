@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.patch_stdout import patch_stdout
 from rich.console import Console
 from rich.table import Table
@@ -135,7 +136,7 @@ class ShellRepl:
             except (ChatError, ControlError, OperationsError, OrchestrationError, ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
                 self.console.print(f"[red]Błąd:[/red] {exc}")
 
-    def _prompt_text(self) -> str:
+    def _prompt_text(self, colored: bool = True) -> Any:
         marker = f" +{len(self.pending_attachments)} plik" if self.pending_attachments else ""
         now = datetime.now()
         time_str = now.strftime("%H:%M")
@@ -148,7 +149,11 @@ class ShellRepl:
             rel = cwd.as_posix().lstrip("/")
         path_segment = f"/{rel}" if rel and rel != "." else ""
         menu_segment = f"/{self.current_menu.lstrip('/')}" if getattr(self, "current_menu", "") else ""
-        return f"⚡subactor/{username}{path_segment}/{time_str}{menu_segment}{marker}> "
+        if not colored:
+            return f"⚡subactor/{username}{path_segment}/{time_str}{menu_segment}{marker}> "
+        prefix = f"⚡subactor/{username}{path_segment}/"
+        suffix = f"{menu_segment}{marker}> "
+        return ANSI(f"\x1b[33m{prefix}\x1b[32m{time_str}\x1b[33m{suffix}\x1b[0m")
 
     async def _command(self, line: str) -> bool:
         try:
