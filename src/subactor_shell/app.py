@@ -21,6 +21,7 @@ from .control_env import apply_control_environment
 from .operations import OperationSettings, OperationsClient, run_operational_command
 from .repl import ShellRepl
 from .store import Store
+from .system_config import SystemConfigClient
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -138,6 +139,14 @@ def build_parser() -> argparse.ArgumentParser:
     post.add_argument("payload", nargs="?", default="{}")
     post.add_argument("--confirm", default="")
     sub.add_parser("endpoints", help="katalog operacyjnego API")
+
+    scope = sub.add_parser("scope", help="scope code i data na wskazanym node")
+    scope.add_argument("--node", default="current")
+    scope.add_argument("--kind", choices=["all", "code", "data"], default="all")
+    scope.add_argument("--json", action="store_true")
+    account = sub.add_parser("account", help="scope i ustawienia konta providera")
+    account.add_argument("provider", choices=["github"])
+    account.add_argument("--json", action="store_true")
 
     receipts = sub.add_parser("receipts", help="przeglądaj krótkie receipts wykonania")
     receipts_sub = receipts.add_subparsers(dest="receipts_command", required=True)
@@ -394,6 +403,41 @@ def _receipts_command(store: Store, args: argparse.Namespace, console: Console) 
     return 0
 
 
+def _system_config_command(client: SystemConfigClient, args: argparse.Namespace, console: Console) -> int:
+    if args.command == "scope":
+        payload = client.node_scope(args.node)
+        if args.json:
+            console.print_json(json.dumps(payload, ensure_ascii=False))
+            return 0
+        console.print(f"Node: [cyan]{payload['node']['id']}[/cyan] ({payload['node']['hostname']})")
+        if args.kind != "data":
+            table = Table("Repo", "Branch", "URI", "Dirty")
+            for item in payload["scope"]["code"]["repositories"]:
+                table.add_row(str(item["id"]), str(item["branch"]), str(item["uri"]), "tak" if item["dirty"] else "nie")
+            console.print(table)
+        if args.kind != "code":
+            table = Table("Dane", "Rodzaj", "Dostęp", "URI")
+            for item in payload["scope"]["data"]["resources"]:
+                table.add_row(str(item["id"]), str(item["kind"]), str(item["access"]), str(item["uri"]))
+            console.print(table)
+        return 0
+
+    payload = client.account(args.provider)
+    console.print_json(json.dumps(payload, ensure_ascii=False)) if args.json else None
+    if args.json:
+        return 0
+    account = payload["account"]
+    authentication = payload["authentication"]
+    console.print(f"Konto: [cyan]{account['provider']}:{account['configuredSubject']}[/cyan]")
+    console.print(f"Uwierzytelnienie: {authentication['state']} · effective scope: {authentication['effectiveScope']}")
+    table = Table("Ustawienie", "Status", "Lokalizacja")
+    for item in payload["settingsLocations"]:
+        table.add_row(str(item["kind"]), str(item["status"]), str(item["uri"]))
+    console.print(table)
+    console.print(f"Declared scope: code={len(payload['scope']['code'])}, data={len(payload['scope']['data'])}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -412,6 +456,10 @@ def main(argv: list[str] | None = None) -> None:
             return
 
         apply_control_environment()
+
+        if command in {"scope", "account"}:
+            config = load_config(args.config, args.data_dir, create=False)
+            raise SystemExit(_system_config_command(SystemConfigClient(config.system_config), args, console))
 
         operational = {"status", "tickets", "orgs", "projects", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
         if command in operational or (command == "plans" and args.plans_command == "remote"):

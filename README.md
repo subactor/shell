@@ -143,6 +143,32 @@ subactor-shell one 'pokaż sesje'
 
 Przy znanym intencie read-only wynik może zostać wykonany lokalnie bez wywołania providera rozmowy.
 
+## Scope node i konta GitHub
+
+Shell pobiera wspólną, pozbawioną sekretów projekcję z usługi
+`subactor/config`. Po uruchomieniu jej lokalnego endpointu można sprawdzić
+bieżący komputer, osobno scope kodu i danych oraz ustawienia konta:
+
+```bash
+subactor-shell scope --node current
+subactor-shell scope --node current --kind code --json
+subactor-shell scope --node current --kind data
+subactor-shell account github
+subactor-shell account github --json
+```
+
+Endpoint jest jawnie konfigurowany w `~/.config/subactor-shell/config.toml`:
+
+```toml
+[system_config]
+base_url = "http://127.0.0.1:8098"
+timeout_seconds = 5.0
+```
+
+Wynik konta pokazuje tylko skonfigurowany podmiot, znormalizowany stan
+uwierzytelnienia oraz bezpieczne lokalizacje ustawień. Token ani surowy wynik
+`gh auth status` nie są zwracane.
+
 ## Routing modeli
 
 Minimalna konfiguracja lokalnego parsera OpenAI-compatible:

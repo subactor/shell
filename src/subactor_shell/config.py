@@ -101,6 +101,11 @@ bearer_ref = "file://~/.config/subactor-shell/control.token"
 allowed_tools = ["cli.status", "cli.plan", "cli.execute"]
 timeout_seconds = 10.0
 
+# Wspólny, secret-free scope node/konta z subactor/config.
+[system_config]
+base_url = "http://127.0.0.1:8098"
+timeout_seconds = 5.0
+
 # Nazwane connectory są allowlistą. Process connector nie używa shell=True;
 # plan JSON jest przekazywany przez stdin. Przykład:
 # [connectors.my_script]
@@ -197,6 +202,10 @@ DEFAULTS: dict[str, Any] = {
         "allowed_tools": ["cli.status", "cli.plan", "cli.execute"],
         "timeout_seconds": 10.0,
     },
+    "system_config": {
+        "base_url": "http://127.0.0.1:8098",
+        "timeout_seconds": 5.0,
+    },
     "connectors": {},
 }
 
@@ -282,6 +291,10 @@ class AppConfig:
     @property
     def control(self) -> dict[str, Any]:
         return dict(self.raw.get("control", {}))
+
+    @property
+    def system_config(self) -> dict[str, Any]:
+        return dict(self.raw.get("system_config", {}))
 
     @property
     def connectors(self) -> dict[str, Any]:
