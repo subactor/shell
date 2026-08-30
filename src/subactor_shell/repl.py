@@ -126,6 +126,25 @@ class ShellRepl:
                 continue
             if is_exit_command(line):
                 return
+
+            if line.lower() in {"0", "b", "back", "esc"}:
+                self.current_menu = ""
+                continue
+
+            single_aliases = {
+                "s": "/status",
+                "t": "/prs",
+                "m": "/model",
+                "p": "/provider",
+                "f": "/fleet",
+                "d": "/doctor",
+                "h": "/help",
+                "c": "/clear",
+                "q": "/exit",
+            }
+            if line.lower() in single_aliases:
+                line = single_aliases[line.lower()]
+
             try:
                 if line.startswith("/"):
                     keep_running = await self._command(line)
