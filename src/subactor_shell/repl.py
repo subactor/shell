@@ -136,7 +136,17 @@ class ShellRepl:
 
     def _prompt_text(self) -> str:
         marker = f" +{len(self.pending_attachments)} plik" if self.pending_attachments else ""
-        return f"subactor:{self.session.id[:8]}{marker}> "
+        now = datetime.now()
+        time_str = now.strftime("%H:%M")
+        username = os.environ.get("USER", "tom")
+        cwd = Path.cwd()
+        home = Path.home()
+        try:
+            rel = cwd.relative_to(home).as_posix()
+        except ValueError:
+            rel = cwd.as_posix().lstrip("/")
+        path_segment = f"/{rel}" if rel and rel != "." else ""
+        return f"⚡subactor/{username}{path_segment}/{time_str}{marker}> "
 
     async def _command(self, line: str) -> bool:
         try:
