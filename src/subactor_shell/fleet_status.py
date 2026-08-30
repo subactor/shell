@@ -135,7 +135,7 @@ def fetch_systemd_services(timeout: float = 2.0) -> list[tuple[str, str, str]]:
         return []
 
 
-def fetch_planfile_health(url: str = "http://127.0.0.1:8765/health", timeout: float = 1.0) -> tuple[bool, str]:
+def fetch_planfile_health(url: str = "http://127.0.0.1:8765/health", timeout: float = 2.5) -> tuple[bool, str]:
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
