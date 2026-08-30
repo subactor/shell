@@ -18,10 +18,12 @@ from .compiler import ExecutionPlan
 from .config import initialize_layout, load_config
 from .control import SubactorControlClient
 from .control_env import apply_control_environment
+from .fleet_status import fetch_fleet_overview, render_fleet_startup_banner
 from .operations import OperationSettings, OperationsClient, run_operational_command
 from .repl import ShellRepl
 from .store import Store
 from .system_config import SystemConfigClient
+from .terminal import terminal_hyperlinks_enabled
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -178,6 +180,8 @@ def build_parser() -> argparse.ArgumentParser:
     connectors.add_argument("--json", action="store_true")
 
     sub.add_parser("doctor", help="diagnostyka bez ujawniania sekretów")
+    sub.add_parser("fleet", help="stan Pull Requestów, ticketów i floty ekosystemu")
+    sub.add_parser("prs", help="otwarte Pull Requesty (subactor, if-uri)")
     sub.add_parser("acp-agent", help="uruchom agenta ACP v1 po stdio")
     return parser
 
@@ -604,6 +608,11 @@ def main(argv: list[str] | None = None) -> None:
                 console.print(table)
         elif command == "doctor":
             raise SystemExit(_doctor(config, store, chat, console))
+        elif command in {"fleet", "prs"}:
+            hyperlinks = terminal_hyperlinks_enabled(is_terminal=console.is_terminal)
+            overview = fetch_fleet_overview()
+            render_fleet_startup_banner(console, overview, hyperlinks=hyperlinks)
+            return
         elif command == "acp-agent":
             asyncio.run(AcpAgent(chat).run_stdio())
         else:
