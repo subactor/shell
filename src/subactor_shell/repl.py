@@ -148,12 +148,12 @@ class ShellRepl:
         except ValueError:
             rel = cwd.as_posix().lstrip("/")
         path_segment = f"/{rel}" if rel and rel != "." else ""
+        path_str = f"{username}{path_segment}/"
         menu_segment = f"/{self.current_menu.lstrip('/')}" if getattr(self, "current_menu", "") else ""
         if not colored:
-            return f"⚡subactor/{username}{path_segment}/{time_str}{menu_segment}{marker}> "
-        prefix = f"⚡subactor/{username}{path_segment}/"
+            return f"⚡subactor/{path_str}{time_str}{menu_segment}{marker}> "
         suffix = f"{menu_segment}{marker}> "
-        return ANSI(f"\x1b[33m{prefix}\x1b[32m{time_str}\x1b[33m{suffix}\x1b[0m")
+        return ANSI(f"\x1b[33m⚡subactor/\x1b[37m{path_str}\x1b[32m{time_str}\x1b[33m{suffix}\x1b[0m")
 
     async def _command(self, line: str) -> bool:
         try:
