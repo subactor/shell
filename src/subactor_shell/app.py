@@ -122,6 +122,8 @@ def build_parser() -> argparse.ArgumentParser:
     projects = sub.add_parser("projects", help="portfolio projektów lub reconciliation")
     projects.add_argument("--recon", action="store_true", help="widok /api/projects/reconciliation")
     projects.add_argument("--json", action="store_true")
+    performance = sub.add_parser("performance", aliases=["perf"], help="ranking kosztu i ROI URI Process")
+    performance.add_argument("--json", action="store_true")
     sub.add_parser("health", help="publiczny health Subactor Control")
     dispatch = sub.add_parser("dispatch", help="rozdysponuj pracę przez Control")
     dispatch.add_argument("--confirm", default="")
@@ -512,7 +514,7 @@ def main(argv: list[str] | None = None) -> None:
             config = load_config(args.config, args.data_dir, create=False)
             raise SystemExit(_system_config_command(SystemConfigClient(config.system_config), args, console))
 
-        operational = {"status", "tickets", "orgs", "projects", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
+        operational = {"status", "tickets", "orgs", "projects", "performance", "perf", "health", "dispatch", "uri", "api", "get", "post", "endpoints"}
         if command in operational or (command == "plans" and args.plans_command == "remote"):
             client = OperationsClient(OperationSettings.from_environment())
             raise SystemExit(run_operational_command(args, console, client))

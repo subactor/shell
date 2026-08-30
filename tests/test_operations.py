@@ -51,6 +51,7 @@ def test_parser_exposes_bounded_operational_surface() -> None:
     assert parser.parse_args(["projects", "--recon"]).recon is True
     assert parser.parse_args(["plans", "remote", "--status", "active"]).plans_command == "remote"
     assert parser.parse_args(["uri", "planfile://tickets/query/list"]).command == "uri"
+    assert parser.parse_args(["performance", "--json"]).command == "performance"
 
 
 def test_settings_reject_credentials_in_origins_and_support_token_file(tmp_path) -> None:
@@ -165,3 +166,16 @@ def test_projects_recon_uses_reconciliation_endpoint() -> None:
 
     command = args(command="projects", recon=True)
     assert run_operational_command(command, Console(file=None, force_terminal=False), client(handler)) == 0
+
+
+def test_performance_command_uses_fixed_observability_origin() -> None:
+    def handler(request):
+        assert str(request.url) == "http://127.0.0.1:8135/api/process-costs"
+        assert "authorization" not in request.headers
+        return httpx.Response(200, json={
+            "minimum_samples": 12,
+            "processes": [{"process_key": "proc://hot", "total_cost": 2, "unit_cost": 1, "frequency_per_day": 3, "version_cost_growth": 0.2, "predicted_roi": 1.5}],
+            "rankings": {key: ["proc://hot"] for key in ("total_cost", "unit_cost", "frequency", "version_growth", "roi")},
+        })
+
+    assert run_operational_command(args(command="performance"), Console(file=None, force_terminal=False), client(handler)) == 0

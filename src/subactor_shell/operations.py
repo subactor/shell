@@ -39,6 +39,7 @@ subactor status
 subactor tickets --open
 subactor orgs [resource]
 subactor projects [--recon]
+subactor performance [--json]
 subactor plans remote
 subactor uri <uri-process> [json-payload]
 subactor get /api/system/dashboard
@@ -84,6 +85,7 @@ class OperationSettings:
     planfile_url: str
     token: str
     timeout_seconds: float = 20.0
+    observability_url: str = "http://127.0.0.1:8135"
 
     @classmethod
     def from_environment(cls, env: Mapping[str, str] | None = None) -> "OperationSettings":
@@ -99,7 +101,11 @@ class OperationSettings:
             values.get("SUBACTOR_PLANFILE_URL", values.get("PLANFILE_URL", "http://127.0.0.1:8765")),
             "SUBACTOR_PLANFILE_URL",
         )
-        return cls(control_url, planfile_url, _read_token(values))
+        observability_url = _validated_origin(
+            values.get("SUBACTOR_OBSERVABILITY_URL", "http://127.0.0.1:8135"),
+            "SUBACTOR_OBSERVABILITY_URL",
+        )
+        return cls(control_url, planfile_url, _read_token(values), observability_url=observability_url)
 
 
 class OperationsClient:
@@ -125,7 +131,10 @@ class OperationsClient:
             raise OperationsError(
                 "Brak SUBACTOR_ADMIN_TOKEN lub SUBACTOR_ADMIN_TOKEN_FILE; operacja nie została wysłana"
             )
-        base = self.settings.planfile_url if service == "planfile" else self.settings.control_url
+        base = {
+            "planfile": self.settings.planfile_url,
+            "observability": self.settings.observability_url,
+        }.get(service, self.settings.control_url)
         headers = {"Accept": "application/json"}
         if authenticated:
             headers["Authorization"] = f"Bearer {self.settings.token}"
@@ -280,6 +289,37 @@ def _print_projects_reconciliation(console: Console, rows: Sequence[Mapping[str,
     console.print(table)
 
 
+def _performance_rows(payload: Mapping[str, Any]) -> list[tuple[str, str, str]]:
+    definitions = (
+        ("total_cost", "Największy łączny koszt", "total_cost"),
+        ("unit_cost", "Najwyższy koszt jednostkowy", "unit_cost"),
+        ("frequency", "Najwyższa częstotliwość", "frequency_per_day"),
+        ("version_growth", "Największy wzrost wersji", "version_cost_growth"),
+        ("roi", "Najlepszy przewidywany ROI", "predicted_roi"),
+    )
+    processes = {str(row.get("process_key")): row for row in payload.get("processes", []) if isinstance(row, dict)}
+    rankings = payload.get("rankings") if isinstance(payload.get("rankings"), dict) else {}
+    rows = []
+    for ranking, label, field in definitions:
+        keys = rankings.get(ranking, [])
+        key = str(keys[0]) if isinstance(keys, list) and keys else ""
+        value = processes.get(key, {}).get(field)
+        rendered = "brak danych" if not isinstance(value, (int, float)) else (
+            f"{value * 100:.1f}%" if field in {"version_cost_growth", "predicted_roi"} else
+            f"{value:.2f}/dzień" if field == "frequency_per_day" else f"{value:.6f}"
+        )
+        rows.append((label, key or "brak kwalifikujących próbek", rendered))
+    return rows
+
+
+def _print_performance(console: Console, payload: Mapping[str, Any]) -> None:
+    table = Table("Ranking", "URI Process", "Wartość")
+    for row in _performance_rows(payload):
+        table.add_row(*row)
+    console.print(table)
+    console.print(f"Próg: {payload.get('minimum_samples', '?')} próbek; wynik advisory-only.")
+
+
 def _projects_from_reconciliation(payload: Any) -> list[Mapping[str, Any]]:
     if not isinstance(payload, dict):
         return []
@@ -363,6 +403,12 @@ def run_operational_command(args: Any, console: Console, client: OperationsClien
                 _print_json(console, payload)
             else:
                 _print_projects_portfolio(console, filtered)
+        return 0
+    if command in {"performance", "perf"}:
+        payload, _ = client.request("GET", "/api/process-costs", service="observability", authenticated=False)
+        if not isinstance(payload, dict):
+            raise OperationsError("Observability zwróciło nieprawidłową projekcję kosztową")
+        _print_json(console, payload) if args.json else _print_performance(console, payload)
         return 0
     if command == "plans":
         payload, _ = client.request("GET", "/api/plans?view=summary")
