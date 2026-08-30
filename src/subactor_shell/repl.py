@@ -17,6 +17,7 @@ from rich.text import Text
 
 from .chat import ChatError, ChatService
 from .control import ControlError, SubactorControlClient
+from .fleet_status import fetch_fleet_overview, render_fleet_startup_banner
 from .models import Session
 from .operations import OperationSettings, OperationsClient, OperationsError, run_operational_command
 from .orchestration import OrchestrationError
@@ -32,6 +33,11 @@ HELP = """[bold]Rozmowa[/bold]
   /model MODEL                 zmiana modelu w sesji
   /attach PLIK                 dołącz plik do następnej wiadomości
   /info                        aktywna sesja
+
+[bold]Flota i Autonomia[/bold]
+  /prs                         otwarte Pull Requesty (subactor, if-uri)
+  /doctor                      zadania diagnostyczne i naprawcze
+  /fleet                       pełny podgląd ekosystemu (PR, zadania, usługi)
 
 [bold]Dane[/bold]
   /data set NAZWA WARTOŚĆ      zapisz jawne dane tekstowe
@@ -90,11 +96,17 @@ class ShellRepl:
         self.control = SubactorControlClient(chat.config.control, chat.resolver)
 
     async def run(self) -> None:
+        hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
+        try:
+            await asyncio.to_thread(render_fleet_startup_banner, self.console, hyperlinks=hyperlinks)
+        except Exception:
+            pass
         self.console.print(
             f"[bold]Subactor Shell[/bold] — sesja [cyan]{self.session.id}[/cyan], "
             f"provider [green]{self.session.provider}[/green], model [green]{self.session.model}[/green]"
         )
         self.console.print("Wpisz /help, aby zobaczyć komendy. Sekrety podawaj jako {{secret:ALIAS}}.")
+
         while True:
             try:
                 with patch_stdout(raw=True):
@@ -135,6 +147,11 @@ class ShellRepl:
             return False
         if command == "/help":
             self.console.print(HELP)
+            return True
+        if command in {"/prs", "/pr", "/fleet", "/doctor"}:
+            hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
+            overview = await asyncio.to_thread(fetch_fleet_overview)
+            render_fleet_startup_banner(self.console, overview, hyperlinks=hyperlinks)
             return True
         if command == "/new":
             name = " ".join(args) or "Nowa rozmowa"
