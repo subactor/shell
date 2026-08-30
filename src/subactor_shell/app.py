@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import getpass
 import json
+import os
 import stat
 import sys
 from pathlib import Path
@@ -180,6 +181,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     connectors = sub.add_parser("connectors", help="allowlista nazwanych connectorów")
     connectors.add_argument("--json", action="store_true")
+
+    login = sub.add_parser("login", help="uwierzytelnienie sesji CLI (magic link + PKCE)")
+    login.add_argument("email", help="adres e-mail konta SaaS / Subactor")
+
+    auth = sub.add_parser("auth", help="stan uwierzytelnienia i adres Process Control (:8091)")
+    auth.add_argument("--json", action="store_true")
 
     sub.add_parser("doctor", help="diagnostyka bez ujawniania sekretów")
     sub.add_parser("fleet", help="stan Pull Requestów, ticketów i floty ekosystemu")
@@ -608,6 +615,32 @@ def main(argv: list[str] | None = None) -> None:
                 for item in chat.orchestration.registry.list():
                     table.add_row(item.name, item.kind, item.effect, ", ".join(item.allowed_operations))
                 console.print(table)
+        elif command == "login":
+            from .auth import login_with_email, mask_email
+            control_url = getattr(config, "control_url", "http://192.168.188.212:8091")
+            try:
+                res = login_with_email(args.email, control_url=control_url)
+                console.print(f"[green]✓[/green] Wysłano link zatwierdzający na adres [cyan]{res.get('masked_email', args.email)}[/cyan].")
+                console.print("[dim]Kliknij link w wiadomości e-mail, aby aktywować sesję CLI.[/dim]")
+                return
+            except Exception as err:
+                Console(stderr=True).print(f"[red]Błąd logowania:[/red] {err}")
+                raise SystemExit(1)
+        elif command == "auth":
+            from .auth import probe_auth_session, default_session_path
+            control_url = getattr(config, "control_url", "http://192.168.188.212:8091")
+            bearer_token = os.environ.get("SUBACTOR_ADMIN_TOKEN")
+            probe = probe_auth_session(control_url, bearer_token)
+            if getattr(args, "json", False):
+                console.print_json(json.dumps(probe, ensure_ascii=False))
+                return
+            console.print(f"[bold]  Uwierzytelnianie Process Control / SaaS[/bold]")
+            console.print(f"  [dim]Adres usługi:[/dim] [cyan]{control_url}[/cyan]")
+            console.print(f"  [dim]Status sesji:[/dim] {'[green]Uwierzytelniony[/green]' if probe.get('authenticated') else '[yellow]Sesja anonimowa / lokalna[/yellow]'}")
+            if probe.get("identity"):
+                console.print(f"  [dim]Tożsamość:[/dim]   [bold]{probe['identity']}[/bold]")
+            console.print(f"  [dim]Plik sesji:[/dim]   {default_session_path()}")
+            return
         elif command == "doctor":
             raise SystemExit(_doctor(config, store, chat, console))
         elif command in {"fleet", "prs"}:

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import getpass
 import json
+import os
 import shlex
 import signal
 from pathlib import Path
@@ -153,6 +154,26 @@ class ShellRepl:
             hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
             overview = await asyncio.to_thread(fetch_fleet_overview)
             render_fleet_startup_banner(self.console, overview, hyperlinks=hyperlinks)
+            return True
+        if command == "/login":
+            self._require(args, 1, "/login <email>")
+            from .auth import login_with_email
+            control_url = getattr(self.chat.config, "control_url", "http://192.168.188.212:8091")
+            res = login_with_email(args[0], control_url=control_url)
+            self.console.print(f"[green]✓[/green] Wysłano link zatwierdzający na adres [cyan]{res.get('masked_email', args[0])}[/cyan].")
+            self.console.print("[dim]Kliknij link w wiadomości e-mail, aby aktywować sesję CLI.[/dim]")
+            return True
+        if command == "/auth":
+            from .auth import probe_auth_session, default_session_path
+            control_url = getattr(self.chat.config, "control_url", "http://192.168.188.212:8091")
+            bearer_token = os.environ.get("SUBACTOR_ADMIN_TOKEN")
+            probe = probe_auth_session(control_url, bearer_token)
+            self.console.print(f"[bold]  Uwierzytelnianie Process Control / SaaS[/bold]")
+            self.console.print(f"  [dim]Adres usługi:[/dim] [cyan]{control_url}[/cyan]")
+            self.console.print(f"  [dim]Status sesji:[/dim] {'[green]Uwierzytelniony[/green]' if probe.get('authenticated') else '[yellow]Sesja anonimowa / lokalna[/yellow]'}")
+            if probe.get("identity"):
+                self.console.print(f"  [dim]Tożsamość:[/dim]   [bold]{probe['identity']}[/bold]")
+            self.console.print(f"  [dim]Plik sesji:[/dim]   {default_session_path()}")
             return True
         if command == "/new":
             name = " ".join(args) or "Nowa rozmowa"
