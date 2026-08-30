@@ -147,6 +147,17 @@ def build_parser() -> argparse.ArgumentParser:
     account = sub.add_parser("account", help="scope i ustawienia konta providera")
     account.add_argument("provider", choices=["github"])
     account.add_argument("--json", action="store_true")
+    source = sub.add_parser("source", help="federacyjny katalog źródeł konfiguracji")
+    source_sub = source.add_subparsers(dest="source_command", required=True)
+    source_list = source_sub.add_parser("list", help="lista źródeł konfiguracji")
+    source_list.add_argument("--provides", default=None, help="filtr dokładnej zdolności")
+    source_list.add_argument("--json", action="store_true")
+    source_show = source_sub.add_parser("show", help="szczegóły źródła konfiguracji")
+    source_show.add_argument("source_id")
+    source_show.add_argument("--json", action="store_true")
+    resolve = sub.add_parser("resolve", help="znajdź źródła dla wymaganej zdolności")
+    resolve.add_argument("need")
+    resolve.add_argument("--json", action="store_true")
 
     receipts = sub.add_parser("receipts", help="przeglądaj krótkie receipts wykonania")
     receipts_sub = receipts.add_subparsers(dest="receipts_command", required=True)
@@ -422,20 +433,56 @@ def _system_config_command(client: SystemConfigClient, args: argparse.Namespace,
             console.print(table)
         return 0
 
-    payload = client.account(args.provider)
-    console.print_json(json.dumps(payload, ensure_ascii=False)) if args.json else None
-    if args.json:
+    if args.command == "account":
+        payload = client.account(args.provider)
+        console.print_json(json.dumps(payload, ensure_ascii=False)) if args.json else None
+        if args.json:
+            return 0
+        account = payload["account"]
+        authentication = payload["authentication"]
+        console.print(f"Konto: [cyan]{account['provider']}:{account['configuredSubject']}[/cyan]")
+        console.print(f"Uwierzytelnienie: {authentication['state']} · effective scope: {authentication['effectiveScope']}")
+        table = Table("Ustawienie", "Status", "Lokalizacja")
+        for item in payload["settingsLocations"]:
+            table.add_row(str(item["kind"]), str(item["status"]), str(item["uri"]))
+        console.print(table)
+        console.print(f"Declared scope: code={len(payload['scope']['code'])}, data={len(payload['scope']['data'])}")
         return 0
-    account = payload["account"]
-    authentication = payload["authentication"]
-    console.print(f"Konto: [cyan]{account['provider']}:{account['configuredSubject']}[/cyan]")
-    console.print(f"Uwierzytelnienie: {authentication['state']} · effective scope: {authentication['effectiveScope']}")
-    table = Table("Ustawienie", "Status", "Lokalizacja")
-    for item in payload["settingsLocations"]:
-        table.add_row(str(item["kind"]), str(item["status"]), str(item["uri"]))
-    console.print(table)
-    console.print(f"Declared scope: code={len(payload['scope']['code'])}, data={len(payload['scope']['data'])}")
-    return 0
+
+    if args.command == "source":
+        if args.source_command == "list":
+            payload = client.sources(provides=args.provides)
+            if args.json:
+                console.print_json(json.dumps(payload, ensure_ascii=False))
+                return 0
+            table = Table("Źródło", "Rodzaj", "Dostępność", "Zdolności")
+            for item in payload:
+                table.add_row(str(item["id"]), str(item["kind"]), str(item["availability"]["state"]), ", ".join(item["provides"]))
+            console.print(table)
+            return 0
+        payload = client.source(args.source_id)
+        if args.json:
+            console.print_json(json.dumps(payload, ensure_ascii=False))
+            return 0
+        console.print(f"Źródło: [cyan]{payload['id']}[/cyan] · {payload['availability']['state']}")
+        console.print(f"Właściciele: {', '.join(payload['owners'])}")
+        console.print(f"Zdolności: {', '.join(payload['provides'])}")
+        console.print(f"Authority: {payload['authority']}")
+        return 0
+
+    if args.command == "resolve":
+        payload = client.resolve(args.need)
+        if args.json:
+            console.print_json(json.dumps(payload, ensure_ascii=False))
+        else:
+            table = Table("Potrzeba", "Źródło", "Dostępność", "Authority")
+            for item in payload["matchedSources"]:
+                table.add_row(payload["need"], str(item["id"]), str(item["availability"]["state"]), payload["authority"])
+            console.print(table)
+            console.print(f"Mutation mode: {payload['control']['mutationMode']}")
+        return 0 if payload["matchedSources"] else 2
+
+    raise RuntimeError("Nieobsługiwana komenda konfiguracji")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -457,7 +504,7 @@ def main(argv: list[str] | None = None) -> None:
 
         apply_control_environment()
 
-        if command in {"scope", "account"}:
+        if command in {"scope", "account", "source", "resolve"}:
             config = load_config(args.config, args.data_dir, create=False)
             raise SystemExit(_system_config_command(SystemConfigClient(config.system_config), args, console))
 

@@ -53,3 +53,31 @@ class SystemConfigClient:
         if not isinstance(response, dict) or response.get("schema") != "subactor.account-scope/v1":
             raise SystemConfigError("Nieobsługiwany kontrakt scope konta")
         return response
+
+    def sources(self, *, provides: str | None = None) -> list[dict[str, Any]]:
+        query = f"?provides={quote(provides, safe='')}" if provides else ""
+        response = self._get(f"/v1/sources{query}")
+        if not isinstance(response, list) or any(
+            not isinstance(item, dict) or item.get("schema") != "subactor.configuration-source/v1"
+            for item in response
+        ):
+            raise SystemConfigError("Nieobsługiwany kontrakt źródeł konfiguracji")
+        return response
+
+    def source(self, source_id: str) -> dict[str, Any]:
+        response = self._get(f"/v1/sources/{quote(source_id, safe='')}")
+        if not isinstance(response, dict) or response.get("schema") != "subactor.configuration-source/v1":
+            raise SystemConfigError("Nieobsługiwany kontrakt źródła konfiguracji")
+        return response
+
+    def capabilities(self) -> dict[str, Any]:
+        response = self._get("/v1/capabilities")
+        if not isinstance(response, dict) or response.get("schema") != "subactor.configuration-capabilities/v1":
+            raise SystemConfigError("Nieobsługiwany kontrakt zdolności konfiguracji")
+        return response
+
+    def resolve(self, need: str) -> dict[str, Any]:
+        response = self._get(f"/v1/resolve?need={quote(need, safe='')}")
+        if not isinstance(response, dict) or response.get("schema") != "subactor.configuration-resolution/v1":
+            raise SystemConfigError("Nieobsługiwany kontrakt rozwiązywania konfiguracji")
+        return response
