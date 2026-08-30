@@ -188,6 +188,18 @@ def build_parser() -> argparse.ArgumentParser:
     auth = sub.add_parser("auth", help="stan uwierzytelnienia i adres Process Control (:8091)")
     auth.add_argument("--json", action="store_true")
 
+    backup = sub.add_parser("backup", help="zarządzanie kopiami zapasowymi konta i baz SQLite")
+    backup_sub = backup.add_subparsers(dest="backup_command", required=True)
+    backup_create = backup_sub.add_parser("create", help="utwórz nowy snapshot baz i manifest SHA-256")
+    backup_create.add_argument("--tenant", default="default-tenant", help="identyfikator konta organizacji")
+    backup_create.add_argument("--json", action="store_true")
+    backup_list = backup_sub.add_parser("list", help="lista dostępnych kopii zapasowych")
+    backup_list.add_argument("--json", action="store_true")
+    backup_restore = backup_sub.add_parser("restore", help="przywróć bazę z archiwum kopii zapasowej")
+    backup_restore.add_argument("archive", help="ścieżka do pliku archiwum .tar.gz")
+    backup_restore.add_argument("--target-dir", default=None, help="docelowy katalog przywrócenia")
+    backup_restore.add_argument("--dry-run", action="store_true")
+
     sub.add_parser("doctor", help="diagnostyka bez ujawniania sekretów")
     sub.add_parser("fleet", help="stan Pull Requestów, ticketów i floty ekosystemu")
     sub.add_parser("prs", help="otwarte Pull Requesty (subactor, if-uri)")
@@ -641,6 +653,55 @@ def main(argv: list[str] | None = None) -> None:
                 console.print(f"  [dim]Tożsamość:[/dim]   [bold]{probe['identity']}[/bold]")
             console.print(f"  [dim]Plik sesji:[/dim]   {default_session_path()}")
             return
+        elif command == "backup":
+            import httpx
+            control_url = getattr(config, "control_url", "http://192.168.188.212:8091")
+            bearer_token = os.environ.get("SUBACTOR_ADMIN_TOKEN")
+            headers = {"Authorization": f"Bearer {bearer_token}"} if bearer_token else {}
+            
+            if args.backup_command == "create":
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(f"{control_url.rstrip('/')}/api/account/backup/export", json={"tenant_id": args.tenant}, headers=headers)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"Błąd tworzenia backupu: {resp.text}")
+                    data = resp.json()
+                    if getattr(args, "json", False):
+                        console.print_json(json.dumps(data, ensure_ascii=False))
+                        return
+                    console.print(f"[green]✓[/green] Utworzono kopię zapasową konta [bold]{data.get('tenant_id')}[/bold]")
+                    console.print(f"  [dim]Archiwum:[/dim]   [cyan]{data.get('archive_path')}[/cyan]")
+                    console.print(f"  [dim]Rozmiar:[/dim]    {data.get('size_bytes')} bajtów ({data.get('files_count')} plików)")
+                    console.print(f"  [dim]SHA-256:[/dim]    {data.get('sha256')[:16]}...")
+                    return
+
+            if args.backup_command == "list":
+                with httpx.Client(timeout=10.0) as client:
+                    resp = client.get(f"{control_url.rstrip('/')}/api/account/backup/list", headers=headers)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"Błąd pobierania listy backupów: {resp.text}")
+                    data = resp.json()
+                    if getattr(args, "json", False):
+                        console.print_json(json.dumps(data, ensure_ascii=False))
+                        return
+                    table = Table("Plik kopii zapasowej", "Rozmiar", "Data utworzenia")
+                    for b in data.get("backups", []):
+                        table.add_row(b.get("file_name", ""), f"{b.get('size_bytes', 0)} B", b.get("created_at", ""))
+                    console.print(table)
+                    return
+
+            if args.backup_command == "restore":
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(
+                        f"{control_url.rstrip('/')}/api/account/backup/restore",
+                        json={"archive_path": args.archive, "target_dir": args.target_dir, "dry_run": args.dry_run},
+                        headers=headers,
+                    )
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"Błąd przywracania backupu: {resp.text}")
+                    data = resp.json()
+                    console.print(f"[green]✓[/green] Przywrócono dane z kopii [bold]{data.get('backup_id')}[/bold]")
+                    console.print(f"  [dim]Zweryfikowano plików:[/dim] {len(data.get('verified_files', []))}")
+                    return
         elif command == "doctor":
             raise SystemExit(_doctor(config, store, chat, console))
         elif command in {"fleet", "prs"}:
