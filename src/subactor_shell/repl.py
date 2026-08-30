@@ -153,7 +153,7 @@ class ShellRepl:
         if not colored:
             return f"⚡subactor/{path_str}{time_str}{menu_segment}{marker}> "
         suffix = f"{menu_segment}{marker}> "
-        return ANSI(f"\x1b[33m⚡subactor/\x1b[37m{path_str}\x1b[32m{time_str}\x1b[33m{suffix}\x1b[0m")
+        return ANSI(f"\x1b[33m⚡subactor\x1b[37m/{path_str}\x1b[32m{time_str}\x1b[33m{suffix}\x1b[0m")
 
     async def _command(self, line: str) -> bool:
         try:
