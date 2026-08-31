@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.patch_stdout import patch_stdout
 from rich.console import Console
 from rich.table import Table
@@ -24,69 +23,20 @@ from .models import Session
 from .operations import OperationSettings, OperationsClient, OperationsError, run_operational_command
 from .orchestration import OrchestrationError
 from .terminal import terminal_hyperlinks_enabled, ticket_link_lines
+from .surface import DEFAULT_COMMAND_REGISTRY, render_prompt
 
 
-HELP = """[bold]Rozmowa[/bold]
-  /new [nazwa]                 nowa sesja
-  /sessions [del ID|prune]     lista, usunięcie lub czyszczenie starych sesji
-
-  /resume ID                   wznowienie sesji
-  /provider NAZWA              zmiana profilu providera
-  /model MODEL                 zmiana modelu w sesji
-  /attach PLIK                 dołącz plik do następnej wiadomości
-  /info                        aktywna sesja
-
-[bold]Flota i Autonomia[/bold]
-  /prs                         otwarte Pull Requesty (subactor, if-uri)
-  /doctor                      zadania diagnostyczne i naprawcze
-  /fleet                       pełny podgląd ekosystemu (PR, zadania, usługi)
-
-[bold]Dane[/bold]
-  /data set NAZWA WARTOŚĆ      zapisz jawne dane tekstowe
-  /data put NAZWA PLIK         zapisz plik jako artefakt
-  /data list                   lista danych
-  /data del NAZWA              usuń dane
-  W wiadomości użyj: {{data:NAZWA}}
-
-[bold]Sekrety[/bold]
-  /vault bind ALIAS REF        zapisz wyłącznie referencję vault://, env:// lub file://
-  /vault put ALIAS VAULT_REF   wczytaj wartość bez echa, zapisz do KV v2 i utwórz binding
-  /vault grant ALIAS           jednorazowo zezwól na {{secret:ALIAS}}
-  /vault list                  lista aliasów i referencji (bez wartości)
-  /vault unbind ALIAS          usuń binding
-  /vault wrap ALIAS [TTL]      utwórz jednorazowy wrapping token Vault
-
-[bold]Orkiestracja i tokeny[/bold]
-  /plans                       lista planów sesji
-  /plan ID                     pokaż plan JSON
-  /apply ID                    zastosuj plan; zmiany wymagają EXECUTE
-  /receipts                    lista receipts sesji
-  /receipt ID                  pokaż receipt JSON
-  /route                       ostatnia decyzja routera
-  /metrics                     tokeny, koszt i udział fast path
-  /catalog                     lokalny katalog intentów
-  /connectors                  allowlista connectorów
-
-[bold]Subactor Control[/bold]
-  /status                      wywołaj cli.status
-  /orgs [zasób]                rejestry organizacji (dashboard lub lista)
-  /projects [recon]            portfolio projektów lub reconciliation
-  /performance                 ranking kosztu, częstotliwości, wzrostu i ROI
-  /control tools               sprawdź zamkniętą granicę MCP
-  /control call TOOL JSON      wywołaj cli.status/plan/execute
-
-[bold]Pozostałe[/bold]
-  /export PLIK                 eksport rozmowy do JSON (bez rozwiniętych sekretów)
-  /help                        ta pomoc
-  /q | /quit | /exit           wyjście; działa też q, quit, exit i Ctrl-C
-"""
-
-
-EXIT_COMMANDS = frozenset({"/q", "/quit", "/exit", "q", "quit", "exit"})
+HELP = DEFAULT_COMMAND_REGISTRY.render_help()
+EXIT_COMMANDS = frozenset(
+    value
+    for command in DEFAULT_COMMAND_REGISTRY.commands
+    if command.exits
+    for value in (command.command, *command.aliases)
+)
 
 
 def is_exit_command(value: str) -> bool:
-    return value.strip().lower() in EXIT_COMMANDS
+    return DEFAULT_COMMAND_REGISTRY.is_exit(value)
 
 
 class ShellRepl:
@@ -131,19 +81,7 @@ class ShellRepl:
                 self.current_menu = ""
                 continue
 
-            single_aliases = {
-                "s": "/status",
-                "t": "/prs",
-                "m": "/model",
-                "p": "/provider",
-                "f": "/fleet",
-                "d": "/doctor",
-                "h": "/help",
-                "c": "/clear",
-                "q": "/exit",
-            }
-            if line.lower() in single_aliases:
-                line = single_aliases[line.lower()]
+            line = DEFAULT_COMMAND_REGISTRY.resolve_shortcut(line)
 
             try:
                 if line.startswith("/"):
@@ -156,23 +94,11 @@ class ShellRepl:
                 self.console.print(f"[red]Błąd:[/red] {exc}")
 
     def _prompt_text(self, colored: bool = True) -> Any:
-        marker = f" +{len(self.pending_attachments)} plik" if self.pending_attachments else ""
-        now = datetime.now()
-        time_str = now.strftime("%H:%M")
-        username = os.environ.get("USER", "tom")
-        cwd = Path.cwd()
-        home = Path.home()
-        try:
-            rel = cwd.relative_to(home).as_posix()
-        except ValueError:
-            rel = cwd.as_posix().lstrip("/")
-        path_segment = f"/{rel}" if rel and rel != "." else ""
-        path_str = f"{username}{path_segment}/"
-        menu_segment = f"/{self.current_menu.lstrip('/')}" if getattr(self, "current_menu", "") else ""
-        if not colored:
-            return f"⚡subactor/{path_str}{time_str}{menu_segment}{marker}> "
-        suffix = f"{menu_segment}{marker}> "
-        return ANSI(f"\x1b[33m⚡subactor\x1b[37m/{path_str}\x1b[32m{time_str}\x1b[33m{suffix}\x1b[0m")
+        return render_prompt(
+            attachment_count=len(self.pending_attachments),
+            menu=getattr(self, "current_menu", ""),
+            colored=colored,
+        )
 
     async def _command(self, line: str) -> bool:
         try:
@@ -185,6 +111,9 @@ class ShellRepl:
             return False
         if command == "/help":
             self.console.print(HELP)
+            return True
+        if command == "/clear":
+            self.console.clear()
             return True
         if command in {"/prs", "/pr", "/fleet", "/doctor"}:
             hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
