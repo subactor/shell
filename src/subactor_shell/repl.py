@@ -19,6 +19,7 @@ from rich.text import Text
 from .chat import ChatError, ChatService
 from .control import ControlError, SubactorControlClient
 from .fleet_status import fetch_fleet_overview, render_fleet_startup_banner
+from .interaction import SurfaceInputKind, TerminalInteractionEngine
 from .models import Session
 from .operations import OperationSettings, OperationsClient, OperationsError, run_operational_command
 from .orchestration import OrchestrationError
@@ -48,6 +49,7 @@ class ShellRepl:
         self.pending_attachments: list[Path] = []
         self.control = SubactorControlClient(chat.config.control, chat.resolver)
         self.current_menu = ""
+        self.interaction = TerminalInteractionEngine(DEFAULT_COMMAND_REGISTRY)
 
     async def run(self) -> None:
         hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
@@ -71,25 +73,22 @@ class ShellRepl:
             except KeyboardInterrupt:
                 self.console.print()
                 continue
-            line = line.strip()
-            if not line:
+            surface_input = self.interaction.interpret(line)
+            if surface_input.kind is SurfaceInputKind.EMPTY:
                 continue
-            if is_exit_command(line):
+            if surface_input.kind is SurfaceInputKind.EXIT:
                 return
-
-            if line.lower() in {"0", "b", "back", "esc"}:
+            if surface_input.kind is SurfaceInputKind.BACK:
                 self.current_menu = ""
                 continue
 
-            line = DEFAULT_COMMAND_REGISTRY.resolve_shortcut(line)
-
             try:
-                if line.startswith("/"):
-                    keep_running = await self._command(line)
+                if surface_input.kind is SurfaceInputKind.COMMAND:
+                    keep_running = await self._command(surface_input.value)
                     if not keep_running:
                         return
                 else:
-                    await self._send(line)
+                    await self._send(surface_input.value)
             except (ChatError, ControlError, OperationsError, OrchestrationError, ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
                 self.console.print(f"[red]Błąd:[/red] {exc}")
 
