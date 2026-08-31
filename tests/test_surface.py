@@ -29,6 +29,8 @@ def test_shortcuts_and_help_come_from_the_same_registry():
     for shortcut, command in expected.items():
         assert DEFAULT_COMMAND_REGISTRY.resolve_shortcut(shortcut) == command
         assert command in help_text
+    assert "/login <email>" in help_text
+    assert "/auth" in help_text
 
 
 def test_exit_policy_is_declared_by_the_command_registry():
@@ -63,3 +65,32 @@ def test_registry_rejects_duplicate_shortcuts_before_rendering_them():
 
     with pytest.raises(ValueError, match="Powielony skrót"):
         CommandRegistry(commands)
+
+
+def test_command_aliases_resolve_to_the_canonical_domain_handler():
+    assert DEFAULT_COMMAND_REGISTRY.handler_for("/prs") == "fleet"
+    assert DEFAULT_COMMAND_REGISTRY.handler_for("/pr") == "fleet"
+    assert DEFAULT_COMMAND_REGISTRY.handler_for("/performance") == "operations"
+    assert DEFAULT_COMMAND_REGISTRY.handler_for("/perf") == "operations"
+
+
+def test_registry_and_repl_handler_sets_are_complete():
+    available = {
+        "auth",
+        "clear",
+        "control",
+        "data",
+        "export",
+        "fleet",
+        "help",
+        "operations",
+        "orchestration",
+        "session",
+        "status",
+        "vault",
+    }
+
+    assert DEFAULT_COMMAND_REGISTRY.validate_handlers(available) == ()
+    assert DEFAULT_COMMAND_REGISTRY.validate_handlers(available - {"auth"}) == (
+        "Brak handlera REPL: auth",
+    )
