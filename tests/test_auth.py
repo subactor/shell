@@ -1,6 +1,8 @@
-import os
 from pathlib import Path
+
+import httpx
 import pytest
+
 from subactor_shell.auth import (
     normalize_email,
     mask_email,
@@ -42,6 +44,21 @@ def test_write_cli_session(tmp_path: Path):
     assert "sub_test_token_123" in content
 
 
-def test_probe_auth_session():
-    res = probe_auth_session("http://192.168.188.212:8091", bearer_token=os.environ.get("SUBACTOR_ADMIN_TOKEN"))
+def test_probe_auth_session(monkeypatch: pytest.MonkeyPatch):
+    real_client = httpx.Client
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert request.url == "http://control.test/api/session"
+        assert request.headers["Authorization"] == "Bearer test-token"
+        return httpx.Response(200, json={"ok": True, "authenticated": True})
+
+    transport = httpx.MockTransport(respond)
+    monkeypatch.setattr(
+        "subactor_shell.auth.httpx.Client",
+        lambda **kwargs: real_client(transport=transport, **kwargs),
+    )
+
+    res = probe_auth_session("http://control.test", bearer_token="test-token")
+
     assert res.get("ok") is True
+    assert res.get("authenticated") is True

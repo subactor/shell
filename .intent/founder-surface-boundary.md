@@ -12,7 +12,12 @@ Authorized paths:
 - `src/subactor_shell/surface.py`
 - `tests/test_shell_integration.py`
 - `tests/test_surface.py`
+- `tests/test_auth.py`
 - `.intent/founder-surface-boundary.md`
+
+The test boundary also removes live Control availability from unit-test
+outcomes. Authentication probes must use a deterministic HTTP transport; live
+connectivity belongs to an explicitly selected integration or smoke suite.
 
 Non-goals: no takeover of the `subactor` executable, no Control mutation
 changes, no provider or Vault changes, and no cross-repository runtime
