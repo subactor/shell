@@ -50,6 +50,23 @@ class ShellRepl:
         self.control = SubactorControlClient(chat.config.control, chat.resolver)
         self.current_menu = ""
         self.interaction = TerminalInteractionEngine(DEFAULT_COMMAND_REGISTRY)
+        self.command_handlers = {
+            "help": self._command_help,
+            "clear": self._command_clear,
+            "fleet": self._command_fleet,
+            "auth": self._command_auth,
+            "session": self._command_session,
+            "data": self._command_data,
+            "vault": self._command_vault,
+            "orchestration": self._command_orchestration,
+            "status": self._command_status,
+            "operations": self._command_operations,
+            "control": self._command_control,
+            "export": self._command_export,
+        }
+        violations = DEFAULT_COMMAND_REGISTRY.validate_handlers(set(self.command_handlers))
+        if violations:
+            raise ValueError("Niespójny rejestr komend: " + "; ".join(violations))
 
     async def run(self) -> None:
         hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
@@ -108,17 +125,27 @@ class ShellRepl:
         args = parts[1:]
         if is_exit_command(command):
             return False
-        if command == "/help":
-            self.console.print(HELP)
-            return True
-        if command == "/clear":
-            self.console.clear()
-            return True
-        if command in {"/prs", "/pr", "/fleet", "/doctor"}:
-            hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
-            overview = await asyncio.to_thread(fetch_fleet_overview)
-            render_fleet_startup_banner(self.console, overview, hyperlinks=hyperlinks)
-            return True
+        handler_id = DEFAULT_COMMAND_REGISTRY.handler_for(command)
+        handler = self.command_handlers.get(handler_id or "")
+        if not handler:
+            raise ValueError(f"Nieznana komenda: {command}. Użyj /help")
+        return await handler(command, args)
+
+    async def _command_help(self, _command: str, _args: list[str]) -> bool:
+        self.console.print(HELP)
+        return True
+
+    async def _command_clear(self, _command: str, _args: list[str]) -> bool:
+        self.console.clear()
+        return True
+
+    async def _command_fleet(self, _command: str, _args: list[str]) -> bool:
+        hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
+        overview = await asyncio.to_thread(fetch_fleet_overview)
+        render_fleet_startup_banner(self.console, overview, hyperlinks=hyperlinks)
+        return True
+
+    async def _command_auth(self, command: str, args: list[str]) -> bool:
         if command == "/login":
             self._require(args, 1, "/login <email>")
             from .auth import login_with_email
@@ -127,18 +154,19 @@ class ShellRepl:
             self.console.print(f"[green]✓[/green] Wysłano link zatwierdzający na adres [cyan]{res.get('masked_email', args[0])}[/cyan].")
             self.console.print("[dim]Kliknij link w wiadomości e-mail, aby aktywować sesję CLI.[/dim]")
             return True
-        if command == "/auth":
-            from .auth import probe_auth_session, default_session_path
-            control_url = getattr(self.chat.config, "control_url", "http://192.168.188.212:8091")
-            bearer_token = os.environ.get("SUBACTOR_ADMIN_TOKEN")
-            probe = probe_auth_session(control_url, bearer_token)
-            self.console.print(f"[bold]  Uwierzytelnianie Process Control / SaaS[/bold]")
-            self.console.print(f"  [dim]Adres usługi:[/dim] [cyan]{control_url}[/cyan]")
-            self.console.print(f"  [dim]Status sesji:[/dim] {'[green]Uwierzytelniony[/green]' if probe.get('authenticated') else '[yellow]Sesja anonimowa / lokalna[/yellow]'}")
-            if probe.get("identity"):
-                self.console.print(f"  [dim]Tożsamość:[/dim]   [bold]{probe['identity']}[/bold]")
-            self.console.print(f"  [dim]Plik sesji:[/dim]   {default_session_path()}")
-            return True
+        from .auth import default_session_path, probe_auth_session
+        control_url = getattr(self.chat.config, "control_url", "http://192.168.188.212:8091")
+        bearer_token = os.environ.get("SUBACTOR_ADMIN_TOKEN")
+        probe = probe_auth_session(control_url, bearer_token)
+        self.console.print("[bold]  Uwierzytelnianie Process Control / SaaS[/bold]")
+        self.console.print(f"  [dim]Adres usługi:[/dim] [cyan]{control_url}[/cyan]")
+        self.console.print(f"  [dim]Status sesji:[/dim] {'[green]Uwierzytelniony[/green]' if probe.get('authenticated') else '[yellow]Sesja anonimowa / lokalna[/yellow]'}")
+        if probe.get("identity"):
+            self.console.print(f"  [dim]Tożsamość:[/dim]   [bold]{probe['identity']}[/bold]")
+        self.console.print(f"  [dim]Plik sesji:[/dim]   {default_session_path()}")
+        return True
+
+    async def _command_session(self, command: str, args: list[str]) -> bool:
         if command == "/new":
             name = " ".join(args) or "Nowa rozmowa"
             self.session = self.chat.new_session(name=name)
@@ -193,12 +221,17 @@ class ShellRepl:
         if command == "/info":
             self._print_info()
             return True
-        if command == "/data":
-            self._handle_data(args)
-            return True
-        if command == "/vault":
-            self._handle_vault(args)
-            return True
+        raise ValueError(f"Nieobsługiwana komenda sesji: {command}")
+
+    async def _command_data(self, _command: str, args: list[str]) -> bool:
+        self._handle_data(args)
+        return True
+
+    async def _command_vault(self, _command: str, args: list[str]) -> bool:
+        self._handle_vault(args)
+        return True
+
+    async def _command_orchestration(self, command: str, args: list[str]) -> bool:
         if command == "/plans":
             self._print_plans()
             return True
@@ -265,9 +298,13 @@ class ShellRepl:
                 )
             self.console.print(table)
             return True
-        if command == "/status":
-            await self._send("pokaż status subactora")
-            return True
+        raise ValueError(f"Nieobsługiwana komenda orkiestracji: {command}")
+
+    async def _command_status(self, _command: str, _args: list[str]) -> bool:
+        await self._send("pokaż status subactora")
+        return True
+
+    async def _command_operations(self, command: str, args: list[str]) -> bool:
         if command == "/orgs":
             await self._run_operational("orgs", args)
             return True
@@ -277,18 +314,20 @@ class ShellRepl:
         if command in {"/performance", "/perf"}:
             await self._run_operational("performance", args)
             return True
-        if command == "/control":
-            await self._handle_control(args)
-            return True
-        if command == "/export":
-            self._require(args, 1, "/export PLIK")
-            target = Path(args[0]).expanduser()
-            target.parent.mkdir(parents=True, exist_ok=True)
-            payload = self.chat.store.export_session(self.session.id)
-            target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-            self.console.print(f"Zapisano: {target}")
-            return True
-        raise ValueError(f"Nieznana komenda: {command}. Użyj /help")
+        raise ValueError(f"Nieobsługiwana komenda operacyjna: {command}")
+
+    async def _command_control(self, _command: str, args: list[str]) -> bool:
+        await self._handle_control(args)
+        return True
+
+    async def _command_export(self, _command: str, args: list[str]) -> bool:
+        self._require(args, 1, "/export PLIK")
+        target = Path(args[0]).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = self.chat.store.export_session(self.session.id)
+        target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.console.print(f"Zapisano: {target}")
+        return True
 
     async def _send(self, text: str) -> None:
         cancel_event = asyncio.Event()
