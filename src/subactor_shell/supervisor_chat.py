@@ -89,7 +89,7 @@ SUPERVISOR_CHAT_USAGE = """Użycie: /supervisor [status|observe|cycle|questions|
   cycle      jeden cykl oceny (--discover); nie jest apply; daemon może nadpisać
   questions  oczekujące pytania do Foundera; ślepy daemon dołącza obserwację czatu
   answer     /supervisor answer <id> <treść>  — HITL, nie apply
-  report     skrót delegacji i fingerprintów
+  report     skrót delegacji, decyzji daemona i fingerprintów
 
 Poza czatem: subactor-shell supervisor status
 W Founder Chat: /supervisor status
@@ -450,6 +450,61 @@ def _observation_lines(observation: Mapping[str, Any], *, label: str) -> list[st
     return lines
 
 
+def _is_supervisor_report(data: Mapping[str, Any]) -> bool:
+    return (
+        isinstance(data.get("system"), dict)
+        and isinstance(data.get("process"), dict)
+        and "evidenceRule" in data
+    )
+
+
+def _compact_report(data: Mapping[str, Any]) -> str:
+    system = data["system"] if isinstance(data.get("system"), dict) else {}
+    process = data["process"] if isinstance(data.get("process"), dict) else {}
+    assessment = system["lastAssessment"] if isinstance(system.get("lastAssessment"), dict) else {}
+    lines: list[str] = []
+    if "paused" in system:
+        lines.append(f"  pauza: {'tak' if system.get('paused') else 'nie'}")
+    if system.get("cycles") is not None:
+        lines.append(f"  cykle: {system.get('cycles')}")
+    if system.get("consecutiveFailures"):
+        lines.append(f"  kolejne błędy: {system.get('consecutiveFailures')}")
+    if assessment.get("decision"):
+        lines.append(f"  ostatnia decyzja daemona: {assessment.get('decision')}")
+    if assessment.get("systemState"):
+        lines.append(f"  stan daemona: {assessment.get('systemState')}")
+    if assessment.get("summary"):
+        lines.append(f"  podsumowanie: {_one_line(assessment.get('summary'), 240)}")
+    active = process.get("active") if isinstance(process.get("active"), list) else []
+    lines.append(
+        f"  delegacje: aktywne={len(active)}"
+        f" ukończone={process.get('completed', 0)}"
+        f" błąd={process.get('failed', 0)}"
+        f" zablokowane={process.get('blocked', 0)}"
+    )
+    for entry in active[:4]:
+        if not isinstance(entry, dict):
+            continue
+        ident = entry.get("ticket") or entry.get("id") or "?"
+        meta = "/".join(item for item in (entry.get("mode"), entry.get("status")) if item)
+        goal = _one_line(entry.get("goal"), 160)
+        lines.append(f"  {ident}{f' {meta}' if meta else ''}{f': {goal}' if goal else ''}")
+    extra = len(active) - 4
+    if extra > 0:
+        lines.append(f"  … +{extra} aktywnych")
+    decisions = data.get("founderDecisions") if isinstance(data.get("founderDecisions"), list) else []
+    if decisions:
+        lines.append(f"  pytania Foundera: {len(decisions)}  → /supervisor questions")
+        if assessment.get("decision") == "observe_more":
+            lines.append("  pytania daemona mogą być nieaktualne — /supervisor observe")
+    standards = data.get("standards") if isinstance(data.get("standards"), dict) else None
+    if standards is not None:
+        lines.append(f"  standardy: {'ok' if standards.get('ok') is True else 'błąd'}")
+    if data.get("evidenceRule"):
+        lines.append(f"  dowód: {_one_line(data.get('evidenceRule'), 200)}")
+    return "\n".join(lines)
+
+
 def compact_supervisor_view(data: Any, *, chat_observation: Any | None = None) -> str:
     if isinstance(data, dict) and chat_observation is None and isinstance(data.get("chatObservation"), dict):
         chat_observation = data["chatObservation"]
@@ -478,6 +533,8 @@ def compact_supervisor_view(data: Any, *, chat_observation: Any | None = None) -
         return "\n".join(lines)
     if not isinstance(data, dict):
         return ""
+    if _is_supervisor_report(data):
+        return _compact_report(data)
     observation = data if data.get("schemaVersion") == "subactor.observation/v1" else (
         data["observation"] if isinstance(data.get("observation"), dict) else None
     )
@@ -492,7 +549,7 @@ def compact_supervisor_view(data: Any, *, chat_observation: Any | None = None) -
     lines: list[str] = []
     if data.get("cycleId"):
         lines.append(f"  cykl: {data.get('cycleId')}")
-        lines.append("  współdzielony stan: daemon bez sesji może nadpisać ten cykl")
+        lines.append("  współdzielony stan: daemon może nadpisać ten cykl następną oceną")
     if data.get("analyzed") is True:
         lines.append("  ocena GLM: tak")
     elif data.get("analyzed") is False:
@@ -507,7 +564,7 @@ def compact_supervisor_view(data: Any, *, chat_observation: Any | None = None) -
     elif live.get("available") is False:
         lines.append(f"  usługa: lokalna projekcja ({live.get('reason') or 'niedostępna'})")
     if data.get("source") == "running-service":
-        lines.append("  źródło: daemon HTTP — observe/cycle czatu wstrzykują sesję Foundera, daemon nie")
+        lines.append("  źródło: daemon HTTP — dzieci Subactora dostają sesję Foundera z session.json")
     subactor = data.get("subactor") if isinstance(data.get("subactor"), dict) else None
     if subactor is not None:
         lines.append(f"  doctor CLI: {'ok' if subactor.get('ok') is True else 'błąd'}")

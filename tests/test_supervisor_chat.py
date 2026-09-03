@@ -231,7 +231,7 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
         }
     )
     assert "cykl: supervisor-cycle-1" in cycle_view
-    assert "współdzielony stan: daemon bez sesji może nadpisać ten cykl" in cycle_view
+    assert "współdzielony stan: daemon może nadpisać ten cykl następną oceną" in cycle_view
     assert "ocena GLM: tak" in cycle_view
     assert "nieudane komendy: subactor.status" in cycle_view
     assert "ostatnia decyzja: observe_more" in cycle_view
@@ -276,6 +276,48 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
     )
     assert "obserwacja czatu (sesja Foundera): healthy=tak" in overlay
     assert "pytania daemona mogą być nieaktualne wobec obserwacji czatu" in overlay
+    report_view = compact_supervisor_view(
+        {
+            "generatedAt": "2026-09-03T21:19:24.593Z",
+            "evidenceRule": "Brak zwalidowanego receipt oznacza stan w toku, nie sukces.",
+            "founderDecisions": [{"id": "q-1"}, {"id": "q-2"}, {"id": "q-3"}],
+            "improvements": [],
+            "standards": {"ok": True},
+            "system": {
+                "enabled": True,
+                "paused": False,
+                "cycles": 8146,
+                "consecutiveFailures": 0,
+                "lastAssessment": {
+                    "systemState": "healthy",
+                    "decision": "observe_more",
+                    "summary": "Model supervisora jest niedostępny.",
+                },
+            },
+            "process": {
+                "active": [
+                    {
+                        "id": "delegation-1",
+                        "ticket": "PLF-10198",
+                        "mode": "plan",
+                        "status": "planned",
+                        "goal": "Zbadaj i zaplanuj naprawę CI.",
+                        "planHash": "aa" * 32,
+                    }
+                ],
+                "completed": 2,
+                "failed": 0,
+                "blocked": 1,
+            },
+        }
+    )
+    assert "delegacje: aktywne=1 ukończone=2 błąd=0 zablokowane=1" in report_view
+    assert "PLF-10198 plan/planned: Zbadaj i zaplanuj naprawę CI." in report_view
+    assert "ostatnia decyzja daemona: observe_more" in report_view
+    assert "pytania Foundera: 3" in report_view
+    assert "pytania daemona mogą być nieaktualne" in report_view
+    assert "standardy: ok" in report_view
+    assert "aa" * 8 not in report_view
 
 
 def test_questions_payload_parses_log_prefixed_array() -> None:
@@ -349,6 +391,11 @@ def test_live_supervisor_status_questions_and_report() -> None:
     assert questions.get("ok") is True
     report = run_supervisor_chat_command("report")
     assert report.get("ok") is True
+    report_text = format_supervisor_chat_result(report, verbose=False)
+    assert "akcja: report" in report_text
+    if isinstance(report.get("data"), dict) and "evidenceRule" in (report.get("data") or {}):
+        assert "delegacje:" in report_text
+        assert '"evidenceRule"' not in report_text
 
 
 def test_live_supervisor_observe_is_healthy_with_founder_session() -> None:
