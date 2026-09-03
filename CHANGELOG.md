@@ -7,6 +7,14 @@
 - read-only `performance`/`perf` oraz `/performance`/`/perf`, pokazujące pięć
   rankingów kosztu URI Process z osobno walidowanego originu Observability.
 
+## [0.2.3] - 2026-09-03
+
+### Docs
+- Update README.md
+
+### Other
+- Update uv.lock
+
 ## [0.2.2] - 2026-08-29
 
 ### Docs
