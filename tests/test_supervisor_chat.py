@@ -201,6 +201,17 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
     assert "q-1: Czy przywrócić Subactor" in questions_view
     assert "źródło: stan daemona" in questions_view
     assert "przed odpowiedzią: /supervisor observe" in questions_view
+    overlay_questions = compact_supervisor_view(
+        [{"id": "q-1", "question": "Czy przywrócić Subactor?"}],
+        chat_observation={
+            "schemaVersion": "subactor.observation/v1",
+            "healthy": True,
+            "degraded": False,
+            "failed": [],
+        },
+    )
+    assert "obserwacja czatu (sesja Foundera): healthy=tak" in overlay_questions
+    assert "pytania daemona mogą być nieaktualne wobec obserwacji czatu" in overlay_questions
     cycle_view = compact_supervisor_view(
         {
             "ok": True,
@@ -220,6 +231,7 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
         }
     )
     assert "cykl: supervisor-cycle-1" in cycle_view
+    assert "współdzielony stan: daemon bez sesji może nadpisać ten cykl" in cycle_view
     assert "ocena GLM: tak" in cycle_view
     assert "nieudane komendy: subactor.status" in cycle_view
     assert "ostatnia decyzja: observe_more" in cycle_view
@@ -429,6 +441,51 @@ def test_blind_daemon_status_attaches_chat_observation() -> None:
     )
     assert [item[item.index("supervisor") + 1] for item in healthy_calls] == ["status"]
     assert "chatObservation" not in (healthy["data"] or {})
+
+
+def test_pending_questions_attach_chat_observation() -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(argv, **_options):
+        calls.append(argv)
+        if "observe" in argv:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(
+                    {
+                        "schemaVersion": "subactor.observation/v1",
+                        "healthy": True,
+                        "degraded": False,
+                        "failed": [],
+                    }
+                ),
+                stderr="",
+            )
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps([{"id": "q-1", "question": "Czy przywrócić Subactor?"}]),
+            stderr="",
+        )
+
+    result = run_supervisor_chat_command(
+        "questions",
+        env={"PATH": "/usr/bin", "SUBACTOR_ADMIN_TOKEN": "token"},
+        run=fake_run,
+        invocation={
+            "executable": "node",
+            "prefix_args": ["/opt/autonomy.js"],
+            "root": "/opt",
+            "cli_path": "/opt/autonomy.js",
+        },
+    )
+    assert [item[item.index("supervisor") + 1] for item in calls] == ["questions", "observe"]
+    assert result["data"][0]["id"] == "q-1"
+    assert result["chatObservation"]["healthy"] is True
+    compact = format_supervisor_chat_result(result, verbose=False)
+    assert "q-1: Czy przywrócić Subactor" in compact
+    assert "obserwacja czatu (sesja Foundera): healthy=tak" in compact
+    assert "pytania daemona mogą być nieaktualne wobec obserwacji czatu" in compact
+    assert '"chatObservation"' not in compact
 
 
 def test_process_env_drops_unrelated_secrets() -> None:
