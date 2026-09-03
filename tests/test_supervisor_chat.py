@@ -14,6 +14,7 @@ from subactor_shell.supervisor_chat import (
     SUPERVISOR_CHAT_USAGE,
     SupervisorChatError,
     compact_supervisor_view,
+    daemon_needs_chat_observation,
     format_supervisor_chat_result,
     parse_supervisor_chat_args,
     resolve_supervisor_invocation,
@@ -194,9 +195,12 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
     assert '"source": "running-service"' not in compact
     verbose = format_supervisor_chat_result(result, verbose=True)
     assert '"source": "running-service"' in verbose
-    assert "q-1: Czy przywrócić Subactor" in compact_supervisor_view(
+    questions_view = compact_supervisor_view(
         [{"id": "q-1", "question": "Czy przywrócić Subactor?"}]
     )
+    assert "q-1: Czy przywrócić Subactor" in questions_view
+    assert "źródło: stan daemona" in questions_view
+    assert "przed odpowiedzią: /supervisor observe" in questions_view
     cycle_view = compact_supervisor_view(
         {
             "ok": True,
@@ -234,6 +238,32 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
         }
     )
     assert "status: error: brak aktywnej sesji" in auth_fail
+    pending_payload = {
+        "source": "running-service",
+        "subactor": {"ok": True},
+        "supervisor": {"paused": False, "pendingQuestions": 3, "assessmentReady": False},
+    }
+    pending = compact_supervisor_view(pending_payload)
+    assert "pytania Foundera: 3" in pending
+    assert "/supervisor questions" in pending
+    assert "ocena GLM daemona: niegotowa" in pending
+    assert "źródło: daemon HTTP" in pending
+    assert "doctor CLI: ok" in pending
+    assert "przed odpowiedzią: /supervisor observe" in pending
+    assert daemon_needs_chat_observation(pending_payload)
+    overlay = compact_supervisor_view(
+        {
+            **pending_payload,
+            "chatObservation": {
+                "schemaVersion": "subactor.observation/v1",
+                "healthy": True,
+                "degraded": False,
+                "failed": [],
+            },
+        }
+    )
+    assert "obserwacja czatu (sesja Foundera): healthy=tak" in overlay
+    assert "pytania daemona mogą być nieaktualne wobec obserwacji czatu" in overlay
 
 
 def test_questions_payload_parses_log_prefixed_array() -> None:
@@ -257,6 +287,7 @@ def test_questions_payload_parses_log_prefixed_array() -> None:
     assert result["data"][0]["id"] == "q-9"
     rendered = format_supervisor_chat_result(result, verbose=False)
     assert "q-9: Czy przywrócić Subactor" in rendered
+    assert "źródło: stan daemona" in rendered
     assert '"status": "pending"' not in rendered
 
 
@@ -297,10 +328,107 @@ def test_live_supervisor_status_questions_and_report() -> None:
     text = format_supervisor_chat_result(status, verbose=False)
     assert "akcja: status" in text
     assert "wynik: ok" in text
+    chat_observation = (status.get("data") or {}).get("chatObservation")
+    if isinstance(chat_observation, dict):
+        assert chat_observation.get("healthy") is True
+        assert "obserwacja czatu (sesja Foundera)" in text
+        assert "ostatnia decyzja daemona" in text
     questions = run_supervisor_chat_command("questions")
     assert questions.get("ok") is True
     report = run_supervisor_chat_command("report")
     assert report.get("ok") is True
+
+
+def test_live_supervisor_observe_is_healthy_with_founder_session() -> None:
+    env = supervisor_process_env()
+    if not env.get("SUBACTOR_ADMIN_TOKEN"):
+        pytest.skip("brak sesji Foundera")
+    try:
+        result = run_supervisor_chat_command("observe")
+    except SupervisorChatError as exc:
+        pytest.skip(str(exc))
+    if not result.get("ok"):
+        pytest.skip(result.get("stderr") or "observe failed")
+    data = result.get("data") or {}
+    assert data.get("healthy") is True
+    assert data.get("degraded") is not True
+    assert not data.get("failed")
+
+
+def test_blind_daemon_status_attaches_chat_observation() -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(argv, **_options):
+        calls.append(argv)
+        if "observe" in argv:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps(
+                    {
+                        "schemaVersion": "subactor.observation/v1",
+                        "healthy": True,
+                        "degraded": False,
+                        "failed": [],
+                    }
+                ),
+                stderr="",
+            )
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "source": "running-service",
+                    "subactor": {"ok": True},
+                    "supervisor": {"paused": False, "pendingQuestions": 3, "assessmentReady": False},
+                }
+            ),
+            stderr="",
+        )
+
+    invocation = {
+        "executable": "node",
+        "prefix_args": ["/opt/autonomy.js"],
+        "root": "/opt",
+        "cli_path": "/opt/autonomy.js",
+    }
+    result = run_supervisor_chat_command(
+        "status",
+        env={"PATH": "/usr/bin", "SUBACTOR_ADMIN_TOKEN": "token"},
+        run=fake_run,
+        invocation=invocation,
+    )
+    assert [item[item.index("supervisor") + 1] for item in calls] == ["status", "observe"]
+    assert result["argv"] == ["/opt/autonomy.js", "supervisor", "status", "--root", "/opt"]
+    assert result["data"]["chatObservation"]["healthy"] is True
+    compact = format_supervisor_chat_result(result, verbose=False)
+    assert "obserwacja czatu (sesja Foundera): healthy=tak" in compact
+    assert "pytania daemona mogą być nieaktualne wobec obserwacji czatu" in compact
+    assert '"chatObservation"' not in compact
+
+    healthy_calls: list[list[str]] = []
+
+    def healthy_run(argv, **_options):
+        healthy_calls.append(argv)
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "source": "running-service",
+                    "subactor": {"ok": True},
+                    "supervisor": {"paused": False, "pendingQuestions": 0, "assessmentReady": True},
+                }
+            ),
+            stderr="",
+        )
+
+    healthy = run_supervisor_chat_command(
+        "status",
+        env={"PATH": "/usr/bin", "SUBACTOR_ADMIN_TOKEN": "token"},
+        run=healthy_run,
+        invocation=invocation,
+    )
+    assert [item[item.index("supervisor") + 1] for item in healthy_calls] == ["status"]
+    assert "chatObservation" not in (healthy["data"] or {})
 
 
 def test_process_env_drops_unrelated_secrets() -> None:

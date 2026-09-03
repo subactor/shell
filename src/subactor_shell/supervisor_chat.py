@@ -84,10 +84,10 @@ QUESTION_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9._:-]{0,127}$")
 MAX_ANSWER_CHARS = 4000
 
 SUPERVISOR_CHAT_USAGE = """Użycie: /supervisor [status|observe|cycle|questions|report|answer]
-  status     stan LLM supervisora (domyślne)
+  status     stan LLM supervisora (domyślne); ślepy daemon dołącza obserwację czatu
   observe    jeden snapshot read-only Subactora
-  cycle      jeden cykl oceny (--discover); nie jest apply
-  questions  oczekujące pytania do Foundera
+  cycle      jeden cykl oceny (--discover); nie jest apply; daemon może nadpisać
+  questions  oczekujące pytania do Foundera; ślepy daemon dołącza obserwację czatu
   answer     /supervisor answer <id> <treść>  — HITL, nie apply
   report     skrót delegacji i fingerprintów
 
@@ -320,7 +320,7 @@ def run_supervisor_chat_command(
         raise SupervisorChatError(f"Supervisor CLI przekroczył limit czasu dla akcji {action_name}") from exc
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
-    return {
+    result = {
         "ok": completed.returncode == 0,
         "action": action_name,
         "stdout": stdout,
@@ -331,17 +331,134 @@ def run_supervisor_chat_command(
         "executable": resolved["executable"],
         "code": completed.returncode,
     }
+    return _attach_chat_observation(
+        result,
+        env=env,
+        workspace=workspace,
+        run=runner,
+        invocation=resolved,
+    )
 
 
 def _one_line(value: Any, max_len: int = 240) -> str:
     return " ".join(str(value or "").split()).strip()[:max_len]
 
 
-def compact_supervisor_view(data: Any) -> str:
+def _pending_question_count(supervisor: Mapping[str, Any]) -> int | None:
+    pending = supervisor.get("questionsPending")
+    if pending is None:
+        pending = supervisor.get("pendingQuestions")
+    if pending is None and isinstance(supervisor.get("questions"), dict):
+        pending = len(supervisor["questions"])
+    return pending if isinstance(pending, int) else None
+
+
+def _status_decision(data: Mapping[str, Any], supervisor: Mapping[str, Any], assessment: Mapping[str, Any]) -> Any:
+    action_type = data.get("action")
+    if isinstance(action_type, dict):
+        action_type = action_type.get("type")
+    return (
+        assessment.get("decision")
+        or (supervisor.get("lastCycleResult") or {}).get("decision")
+        or data.get("decision")
+        or action_type
+    )
+
+
+def daemon_needs_chat_observation(data: Any) -> bool:
+    if not isinstance(data, dict) or data.get("source") != "running-service":
+        return False
+    supervisor = data["supervisor"] if isinstance(data.get("supervisor"), dict) else {}
+    if supervisor.get("assessmentReady") is False:
+        return True
+    pending = _pending_question_count(supervisor)
+    if isinstance(pending, int) and pending > 0:
+        return True
+    if isinstance(data.get("assessment"), dict):
+        assessment = data["assessment"]
+    elif isinstance(supervisor.get("lastAssessment"), dict):
+        assessment = supervisor["lastAssessment"]
+    else:
+        assessment = data
+    return _status_decision(data, supervisor, assessment) == "observe_more"
+
+
+def _attach_chat_observation(
+    result: dict[str, Any],
+    *,
+    env: Mapping[str, str] | None,
+    workspace: Path | None,
+    run: Callable[..., subprocess.CompletedProcess[str]],
+    invocation: dict[str, Any],
+) -> dict[str, Any]:
+    data = result.get("data")
+    values = os.environ if env is None else env
+    if not result.get("ok") or not _session_token(values):
+        return result
+    needs_status = (
+        result.get("action") == "status"
+        and isinstance(data, dict)
+        and data.get("chatObservation") is None
+        and daemon_needs_chat_observation(data)
+    )
+    needs_questions = (
+        result.get("action") == "questions"
+        and isinstance(data, list)
+        and bool(data)
+        and result.get("chatObservation") is None
+    )
+    if not needs_status and not needs_questions:
+        return result
+    try:
+        observe = run_supervisor_chat_command(
+            "observe",
+            env=env,
+            workspace=workspace,
+            run=run,
+            invocation=invocation,
+        )
+    except SupervisorChatError:
+        return result
+    if not (observe.get("ok") and isinstance(observe.get("data"), dict)):
+        return result
+    if needs_status:
+        result["data"] = {**data, "chatObservation": observe["data"]}
+    else:
+        result["chatObservation"] = observe["data"]
+    return result
+
+
+def _observation_lines(observation: Mapping[str, Any], *, label: str) -> list[str]:
+    failed = [item for item in (observation.get("failed") or []) if item]
+    lines = [
+        f"  {label}: healthy={'tak' if observation.get('healthy') is True else 'nie'}"
+        f" degraded={'tak' if observation.get('degraded') is True else 'nie'}"
+    ]
+    if failed:
+        lines.append(f"  nieudane komendy: {', '.join(str(item) for item in failed[:8])}")
+    commands = observation.get("commands") if isinstance(observation.get("commands"), dict) else {}
+    shown = 0
+    for name, entry in commands.items():
+        if shown >= 4:
+            break
+        if not isinstance(entry, dict) or entry.get("ok"):
+            continue
+        reason = _one_line(entry.get("stderr") or entry.get("error") or "", 160)
+        if reason:
+            lines.append(f"  {name}: {reason}")
+            shown += 1
+    return lines
+
+
+def compact_supervisor_view(data: Any, *, chat_observation: Any | None = None) -> str:
+    if isinstance(data, dict) and chat_observation is None and isinstance(data.get("chatObservation"), dict):
+        chat_observation = data["chatObservation"]
+    if not isinstance(chat_observation, dict):
+        chat_observation = None
     if isinstance(data, list):
         if not data:
             return "  brak oczekujących pytań"
-        lines = []
+        lines = ["  źródło: stan daemona (HITL, nie apply)"]
         for index, item in enumerate(data[:8]):
             if not isinstance(item, dict):
                 lines.append(f"  {index + 1}. {_one_line(item, 200)}")
@@ -350,6 +467,14 @@ def compact_supervisor_view(data: Any) -> str:
             question = _one_line(item.get("question") or item.get("summary") or item.get("goal"), 200)
             lines.append(f"  {ident}{f': {question}' if question else ''}")
         lines.append("  odpowiedź: /supervisor answer <id> <treść>")
+        if chat_observation:
+            lines.extend(_observation_lines(chat_observation, label="obserwacja czatu (sesja Foundera)"))
+            if chat_observation.get("healthy") is True:
+                lines.append("  pytania daemona mogą być nieaktualne wobec obserwacji czatu")
+            else:
+                lines.append("  przed odpowiedzią: /supervisor observe")
+        else:
+            lines.append("  przed odpowiedzią: /supervisor observe")
         return "\n".join(lines)
     if not isinstance(data, dict):
         return ""
@@ -367,62 +492,51 @@ def compact_supervisor_view(data: Any) -> str:
     lines: list[str] = []
     if data.get("cycleId"):
         lines.append(f"  cykl: {data.get('cycleId')}")
+        lines.append("  współdzielony stan: daemon bez sesji może nadpisać ten cykl")
     if data.get("analyzed") is True:
         lines.append("  ocena GLM: tak")
     elif data.get("analyzed") is False:
         reason = _one_line(data.get("reason"), 80)
         lines.append(f"  ocena GLM: nie{f' ({reason})' if reason else ''}")
     if observation:
-        failed = [item for item in (observation.get("failed") or []) if item]
-        lines.append(
-            f"  obserwacja: healthy={'tak' if observation.get('healthy') is True else 'nie'}"
-            f" degraded={'tak' if observation.get('degraded') is True else 'nie'}"
-        )
-        if failed:
-            lines.append(f"  nieudane komendy: {', '.join(str(item) for item in failed[:8])}")
-        commands = observation.get("commands") if isinstance(observation.get("commands"), dict) else {}
-        shown = 0
-        for name, entry in commands.items():
-            if shown >= 4:
-                break
-            if not isinstance(entry, dict) or entry.get("ok"):
-                continue
-            reason = _one_line(entry.get("stderr") or entry.get("error") or "", 160)
-            if reason:
-                lines.append(f"  {name}: {reason}")
-                shown += 1
+        lines.extend(_observation_lines(observation, label="obserwacja"))
+    if chat_observation:
+        lines.extend(_observation_lines(chat_observation, label="obserwacja czatu (sesja Foundera)"))
     if live.get("available") is True:
         lines.append("  usługa: działająca (loopback /health)")
     elif live.get("available") is False:
         lines.append(f"  usługa: lokalna projekcja ({live.get('reason') or 'niedostępna'})")
+    if data.get("source") == "running-service":
+        lines.append("  źródło: daemon HTTP — observe/cycle czatu wstrzykują sesję Foundera, daemon nie")
+    subactor = data.get("subactor") if isinstance(data.get("subactor"), dict) else None
+    if subactor is not None:
+        lines.append(f"  doctor CLI: {'ok' if subactor.get('ok') is True else 'błąd'}")
     if "paused" in supervisor:
         lines.append(f"  pauza: {'tak' if supervisor.get('paused') else 'nie'}")
     if supervisor.get("cycles") is not None:
         lines.append(f"  cykle: {supervisor.get('cycles')}")
     if supervisor.get("lastCycleAt"):
         lines.append(f"  ostatni cykl: {supervisor.get('lastCycleAt')}")
-    action_type = data.get("action")
-    if isinstance(action_type, dict):
-        action_type = action_type.get("type")
-    decision = (
-        assessment.get("decision")
-        or (supervisor.get("lastCycleResult") or {}).get("decision")
-        or data.get("decision")
-        or action_type
-    )
+    decision = _status_decision(data, supervisor, assessment)
     if decision:
-        lines.append(f"  ostatnia decyzja: {decision}")
+        label = "ostatnia decyzja daemona" if data.get("source") == "running-service" else "ostatnia decyzja"
+        lines.append(f"  {label}: {decision}")
     state = assessment.get("systemState") or data.get("systemState")
     if state:
-        lines.append(f"  stan: {state}")
+        state_label = "stan daemona" if data.get("source") == "running-service" else "stan"
+        lines.append(f"  {state_label}: {state}")
     summary = assessment.get("summary") or data.get("summary")
     if summary:
         lines.append(f"  podsumowanie: {_one_line(summary, 240)}")
-    pending = supervisor.get("questionsPending")
-    if pending is None and isinstance(supervisor.get("questions"), dict):
-        pending = len(supervisor["questions"])
+    if supervisor.get("assessmentReady") is False:
+        lines.append("  ocena GLM daemona: niegotowa")
+    pending = _pending_question_count(supervisor)
     if isinstance(pending, int) and pending > 0:
-        lines.append(f"  pytania Foundera: {pending}")
+        lines.append(f"  pytania Foundera: {pending}  → /supervisor questions")
+        if chat_observation and chat_observation.get("healthy") is True:
+            lines.append("  pytania daemona mogą być nieaktualne wobec obserwacji czatu")
+        elif data.get("source") == "running-service":
+            lines.append("  przed odpowiedzią: /supervisor observe")
     return "\n".join(lines)
 
 
@@ -435,7 +549,10 @@ def format_supervisor_chat_result(result: Mapping[str, Any], *, verbose: bool = 
         f"  akcja: {result.get('action') or 'status'}",
         f"  wynik: {'ok' if result.get('ok') else 'błąd'}",
     ]
-    compact = compact_supervisor_view(result.get("data"))
+    compact = compact_supervisor_view(
+        result.get("data"),
+        chat_observation=result.get("chatObservation"),
+    )
     error_line = "" if result.get("ok") else str(result.get("stderr") or "").strip()[:1000]
     action = str(result.get("action") or "status")
     wants_body = verbose or not compact
