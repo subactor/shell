@@ -219,6 +219,21 @@ def test_parse_ignores_log_lines_and_scalar_json_fragments() -> None:
     assert "ocena GLM: tak" in cycle_view
     assert "nieudane komendy: subactor.status" in cycle_view
     assert "ostatnia decyzja: observe_more" in cycle_view
+    auth_fail = compact_supervisor_view(
+        {
+            "schemaVersion": "subactor.observation/v1",
+            "healthy": True,
+            "degraded": True,
+            "failed": ["subactor.status"],
+            "commands": {
+                "status": {
+                    "ok": False,
+                    "stderr": "error: brak aktywnej sesji. Uruchom `subactor login <email>`",
+                }
+            },
+        }
+    )
+    assert "status: error: brak aktywnej sesji" in auth_fail
 
 
 def test_questions_payload_parses_log_prefixed_array() -> None:
@@ -301,3 +316,4 @@ def test_process_env_drops_unrelated_secrets() -> None:
     assert env["SUBACTOR_ADMIN_TOKEN"] == "token"
     assert "OPENAI_API_KEY" not in env
     assert "VAULT_TOKEN" not in env
+    assert "SUBACTOR_ADMIN_TOKEN" in env["SUBACTOR_PASS_ENV"]
