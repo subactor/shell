@@ -203,13 +203,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("doctor", help="diagnostyka bez ujawniania sekretów")
     sub.add_parser("fleet", help="stan Pull Requestów, ticketów i floty ekosystemu")
     sub.add_parser("prs", help="otwarte Pull Requesty (subactor, if-uri)")
-    supervisor = sub.add_parser("supervisor", help="wywołanie LLM supervisora (status/observe/cycle, bez apply)")
+    supervisor = sub.add_parser("supervisor", help="wywołanie LLM supervisora (status/observe/cycle/answer, bez apply)")
     supervisor.add_argument(
-        "action",
-        nargs="?",
-        default="status",
-        choices=["status", "observe", "cycle", "questions", "report", "help"],
-        help="akcja supervisora",
+        "tokens",
+        nargs="*",
+        help="status|observe|cycle|questions|report|help|answer <id> <treść>",
     )
     sub.add_parser("acp-agent", help="uruchom agenta ACP v1 po stdio")
     return parser
@@ -713,10 +711,14 @@ def main(argv: list[str] | None = None) -> None:
         elif command == "doctor":
             raise SystemExit(_doctor(config, store, chat, console))
         elif command == "supervisor":
-            from .supervisor_chat import format_supervisor_chat_result, run_supervisor_chat_command
+            from .supervisor_chat import (
+                format_supervisor_chat_result,
+                parse_supervisor_chat_args,
+                run_supervisor_chat_command,
+            )
 
-            result = run_supervisor_chat_command(args.action)
-            console.print(format_supervisor_chat_result(result), markup=False, end="")
+            result = run_supervisor_chat_command(parse_supervisor_chat_args(getattr(args, "tokens", [])))
+            console.print(format_supervisor_chat_result(result, verbose=True), markup=False, end="")
             if not result.get("ok"):
                 raise SystemExit(1)
             return

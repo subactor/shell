@@ -153,8 +153,8 @@ class ShellRepl:
         return True
 
     async def _command_supervisor(self, _command: str, args: list[str]) -> bool:
-        action = parse_supervisor_chat_args(args)
-        result = await asyncio.to_thread(run_supervisor_chat_command, action)
+        parsed = parse_supervisor_chat_args(args)
+        result = await asyncio.to_thread(run_supervisor_chat_command, parsed)
         self.console.print(format_supervisor_chat_result(result), markup=False, end="")
         if not result.get("ok"):
             raise SupervisorChatError(result.get("stderr") or "Supervisor zwrócił błąd")
