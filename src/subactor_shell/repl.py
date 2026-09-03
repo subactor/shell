@@ -19,6 +19,12 @@ from rich.text import Text
 from .chat import ChatError, ChatService
 from .control import ControlError, SubactorControlClient
 from .fleet_status import fetch_fleet_overview, render_fleet_startup_banner
+from .supervisor_chat import (
+    SupervisorChatError,
+    format_supervisor_chat_result,
+    parse_supervisor_chat_args,
+    run_supervisor_chat_command,
+)
 from .interaction import SurfaceInputKind, TerminalInteractionEngine
 from .models import Session
 from .operations import OperationSettings, OperationsClient, OperationsError, run_operational_command
@@ -54,6 +60,7 @@ class ShellRepl:
             "help": self._command_help,
             "clear": self._command_clear,
             "fleet": self._command_fleet,
+            "supervisor": self._command_supervisor,
             "auth": self._command_auth,
             "session": self._command_session,
             "data": self._command_data,
@@ -106,7 +113,7 @@ class ShellRepl:
                         return
                 else:
                     await self._send(surface_input.value)
-            except (ChatError, ControlError, OperationsError, OrchestrationError, ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
+            except (ChatError, ControlError, OperationsError, OrchestrationError, SupervisorChatError, ValueError, KeyError, OSError, json.JSONDecodeError) as exc:
                 self.console.print(f"[red]Błąd:[/red] {exc}")
 
     def _prompt_text(self, colored: bool = True) -> Any:
@@ -143,6 +150,14 @@ class ShellRepl:
         hyperlinks = terminal_hyperlinks_enabled(is_terminal=self.console.is_terminal)
         overview = await asyncio.to_thread(fetch_fleet_overview)
         render_fleet_startup_banner(self.console, overview, hyperlinks=hyperlinks)
+        return True
+
+    async def _command_supervisor(self, _command: str, args: list[str]) -> bool:
+        action = parse_supervisor_chat_args(args)
+        result = await asyncio.to_thread(run_supervisor_chat_command, action)
+        self.console.print(format_supervisor_chat_result(result), markup=False, end="")
+        if not result.get("ok"):
+            raise SupervisorChatError(result.get("stderr") or "Supervisor zwrócił błąd")
         return True
 
     async def _command_auth(self, command: str, args: list[str]) -> bool:

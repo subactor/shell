@@ -72,6 +72,8 @@ def test_command_aliases_resolve_to_the_canonical_domain_handler():
     assert DEFAULT_COMMAND_REGISTRY.handler_for("/pr") == "fleet"
     assert DEFAULT_COMMAND_REGISTRY.handler_for("/performance") == "operations"
     assert DEFAULT_COMMAND_REGISTRY.handler_for("/perf") == "operations"
+    assert DEFAULT_COMMAND_REGISTRY.handler_for("/supervisor") == "supervisor"
+    assert DEFAULT_COMMAND_REGISTRY.handler_for("/sup") == "supervisor"
 
 
 def test_registry_and_repl_handler_sets_are_complete():
@@ -87,6 +89,7 @@ def test_registry_and_repl_handler_sets_are_complete():
         "orchestration",
         "session",
         "status",
+        "supervisor",
         "vault",
     }
 

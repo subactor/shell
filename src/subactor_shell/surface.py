@@ -110,6 +110,7 @@ COMMANDS = (
     CommandSpec("/prs", "", "otwarte Pull Requesty (subactor, if-uri)", "Flota i Autonomia", aliases=("/pr",), shortcut="t", handler_id="fleet"),
     CommandSpec("/doctor", "", "zadania diagnostyczne i naprawcze", "Flota i Autonomia", shortcut="d", handler_id="fleet"),
     CommandSpec("/fleet", "", "pełny podgląd ekosystemu (PR, zadania, usługi)", "Flota i Autonomia", shortcut="f", handler_id="fleet"),
+    CommandSpec("/supervisor", "[status|observe|cycle|questions]", "status i cykl LLM supervisora (bez apply)", "Flota i Autonomia", aliases=("/sup",), handler_id="supervisor"),
     CommandSpec("/data", "set NAZWA WARTOŚĆ", "zapisz jawne dane tekstowe", "Dane", handler_id="data"),
     CommandSpec("/data", "put NAZWA PLIK", "zapisz plik jako artefakt", "Dane", handler_id="data"),
     CommandSpec("/data", "list", "lista danych", "Dane", handler_id="data"),

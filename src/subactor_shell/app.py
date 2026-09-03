@@ -203,6 +203,14 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("doctor", help="diagnostyka bez ujawniania sekretów")
     sub.add_parser("fleet", help="stan Pull Requestów, ticketów i floty ekosystemu")
     sub.add_parser("prs", help="otwarte Pull Requesty (subactor, if-uri)")
+    supervisor = sub.add_parser("supervisor", help="wywołanie LLM supervisora (status/observe/cycle, bez apply)")
+    supervisor.add_argument(
+        "action",
+        nargs="?",
+        default="status",
+        choices=["status", "observe", "cycle", "questions", "report", "help"],
+        help="akcja supervisora",
+    )
     sub.add_parser("acp-agent", help="uruchom agenta ACP v1 po stdio")
     return parser
 
@@ -704,6 +712,14 @@ def main(argv: list[str] | None = None) -> None:
                     return
         elif command == "doctor":
             raise SystemExit(_doctor(config, store, chat, console))
+        elif command == "supervisor":
+            from .supervisor_chat import format_supervisor_chat_result, run_supervisor_chat_command
+
+            result = run_supervisor_chat_command(args.action)
+            console.print(format_supervisor_chat_result(result), markup=False, end="")
+            if not result.get("ok"):
+                raise SystemExit(1)
+            return
         elif command in {"fleet", "prs"}:
             hyperlinks = terminal_hyperlinks_enabled(is_terminal=console.is_terminal)
             overview = fetch_fleet_overview()
