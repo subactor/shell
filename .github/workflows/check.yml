@@ -14,14 +14,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade uv
+      - run: uv sync --locked --extra dev --python "${{ matrix.python-version }}"
+      - run: uv run --no-sync python -m pytest
       - run: ./scripts/install/sync-docs.sh
       - run: test -x docs/install.sh
