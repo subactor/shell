@@ -310,7 +310,7 @@ name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be", size = 530807, upload-time = "2026-08-03T21:21:18.939Z" }
 wheels = [
@@ -564,9 +564,9 @@ name = "clickmd"
 version = "1.1.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "costs", marker = "python_full_version >= '3.12'" },
-    { name = "goal", marker = "python_full_version >= '3.12'" },
-    { name = "pfix", marker = "python_full_version >= '3.12'" },
+    { name = "costs" },
+    { name = "goal" },
+    { name = "pfix" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3a/12/82b3b80bb2751e0d6c120c1beb11116527cca9322202b5a1924811b58376/clickmd-1.1.15.tar.gz", hash = "sha256:0a2971b952e471c4726bc2f88ed397abd395283c79e4885e435921426493d01c", size = 41145, upload-time = "2026-06-29T07:35:58.128Z" }
 wheels = [
@@ -584,7 +584,7 @@ wheels = [
 
 [[package]]
 name = "costs"
-version = "0.1.53"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
@@ -597,9 +597,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/64/02/126b813e063a47c7e7efef481ac144747f94fd05ae39ee9d5c3c6253a09f/costs-0.1.53.tar.gz", hash = "sha256:9f9f76a9e523e899b72a658c574e33145f0f25b97554c15f70dc714206d3d8ca", size = 30980, upload-time = "2026-07-02T14:11:25.407Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/6f/7f3c72d6d4b5264bd5a3447e18a3b5184bffee143f72c8d023bb759afd1a/costs-0.2.0.tar.gz", hash = "sha256:3782bae859725dae30f697b5f3e5aa5d84e06feadebc5782ae706e21d46437af", size = 44606, upload-time = "2026-09-05T15:49:55.524Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/0e/a6c82f642985c19f6b42a86e5aaf54086fab4ab3771d54e932ec78a7d577/costs-0.1.53-py3-none-any.whl", hash = "sha256:2795668c83a5974c66b1fb6d7831248a481e1bb009f68c4b345d74d357205b88", size = 35990, upload-time = "2026-07-02T14:11:24.146Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/7e/fc91d9fdc7a1ceb9116daffab27124a54f6e8887c9d59d906df43dcbfa6a/costs-0.2.0-py3-none-any.whl", hash = "sha256:4798b8535cbbcbb354e440ebce91365f17c910414bf5831a0610998ae6e679af", size = 48625, upload-time = "2026-09-05T15:49:54.054Z" },
 ]
 
 [[package]]
@@ -863,19 +863,19 @@ wheels = [
 
 [[package]]
 name = "goal"
-version = "2.1.300"
+version = "2.1.302"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click", marker = "python_full_version >= '3.12'" },
-    { name = "clickmd", marker = "python_full_version >= '3.12'" },
-    { name = "costs", marker = "python_full_version >= '3.12'" },
-    { name = "pyyaml", marker = "python_full_version >= '3.12'" },
-    { name = "tomlkit", marker = "python_full_version >= '3.12'" },
-    { name = "typer", marker = "python_full_version >= '3.12'" },
+    { name = "click" },
+    { name = "clickmd" },
+    { name = "costs" },
+    { name = "pyyaml" },
+    { name = "tomlkit" },
+    { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9a/6e/1e30a0bb05253a65019effc0ef36e480aed65cfd98fab6e6318d9b583e7e/goal-2.1.300.tar.gz", hash = "sha256:670ca919d76dea2cac6a0046faa2128ab7d532b2fc0ee454e214830ea3a1b262", size = 385734, upload-time = "2026-08-12T18:48:41.423Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fb/ef/5bef02b32cb404557fbbe89beaac80a5f9f2b432b12938d94e2049bff482/goal-2.1.302.tar.gz", hash = "sha256:4ee3bf320ac81a00380406308716d50b4aa4b19d37ffc6d24f48280252c38a94", size = 393361, upload-time = "2026-09-05T15:20:20.422Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/4c/196a420c891bb0f359fd926c0b85e600c02d3159d34983f9a35430b90083/goal-2.1.300-py3-none-any.whl", hash = "sha256:e5054c1a85dd766e7430adee5c793d840edd1f43bbabd1c2e88be324743224f9", size = 339489, upload-time = "2026-08-12T18:48:39.396Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/63/5f1730cb34ed80776093854e3dc9bc91ea66ad84d6b7975133e20853db3e/goal-2.1.302-py3-none-any.whl", hash = "sha256:175b0bd89b2df1b2c046bc7ccb1be6a2495ff6bd7bb1adfb71e76a2cccb43f8f", size = 343449, upload-time = "2026-09-05T15:20:17.73Z" },
 ]
 
 [[package]]
@@ -929,8 +929,8 @@ name = "httpcore2"
 version = "2.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11", marker = "sys_platform != 'emscripten'" },
-    { name = "truststore", marker = "sys_platform != 'emscripten'" },
+    { name = "h11" },
+    { name = "truststore" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/be/ad/f4f0e57345f1870f3e8cb624e058d7eca6e5a27d33bcc3311d9b618734cd/httpcore2-2.12.0.tar.gz", hash = "sha256:9293522bba0aa7c4c8e9e3f040c16575bd8868e155a77fa30c7a9085a5eae648", size = 67548, upload-time = "2026-08-18T13:22:08.211Z" }
 wheels = [
@@ -1835,7 +1835,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "sys_platform != 'win32'" },
+    { name = "ptyprocess" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
