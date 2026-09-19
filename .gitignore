@@ -20,3 +20,15 @@ config.toml
 /.subactor/receipts/
 /.subactor/cache/
 /.subactor/snapshots/
+
+!.github/
+!.github/**
+!.cursor/
+!.cursor/**
+!.cursor*
+!.aider*
+!.aider.conf.yml
+!scripts/
+!scripts/**
+!project/
+!project/**

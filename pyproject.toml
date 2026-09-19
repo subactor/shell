@@ -31,7 +31,7 @@ subactor-shell = "subactor_shell.app:main"
 where = ["src"]
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-p wellmanifest_governance -q"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
@@ -63,3 +63,8 @@ enabled = true
 todo_file = "TODO.md"
 min_severity = "low"
 deduplicate = true
+
+[tool.wellmanifest]
+standard = "0.20.35"
+revision = "cfaa0bf0ea6b0e7349fed0bb62b5ce15792d687d"
+gate = "project/governance-check.sh"
