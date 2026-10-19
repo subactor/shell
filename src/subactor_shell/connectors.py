@@ -17,6 +17,7 @@ import httpx
 from .compiler import ExecutionPlan, ExecutionStep
 from .config import AppConfig
 from .control import SubactorControlClient
+from .control_env import apply_control_environment
 from .models import utc_now
 from .redaction import ExactRedactor
 from .secret_refs import SecretResolver
@@ -302,7 +303,7 @@ class ConnectorExecutor:
     async def _subactor_cli(self, operation: str) -> dict[str, Any]:
         cli_commands: dict[str, list[str]] = {
             "cli.status": ["status"],
-            "cli.tickets": ["tickets"],
+            "cli.tickets": ["tickets", "open"],
             "cli.projects": ["projects"],
             "cli.registries": ["registries"],
             "cli.watch": ["watch", "--once"],
@@ -310,6 +311,7 @@ class ConnectorExecutor:
         if operation not in cli_commands:
             raise ConnectorError(f"Nieznana operacja Subactor CLI: {operation}")
         cmd_args = cli_commands[operation]
+        apply_control_environment()
         configured = str(self.config.control.get("cli_path", "")).strip()
         discovered = configured or shutil.which("subactor") or ""
         executable = Path(discovered).expanduser()
@@ -324,6 +326,7 @@ class ConnectorExecutor:
             "LC_ALL",
             "LC_CTYPE",
             "PATH",
+            "PLANFILE_PUBLIC_URL",
             "SUBACTOR_ADMIN_TOKEN",
             "SUBACTOR_CONTROL_URL",
             "SUBACTOR_PLANFILE_URL",
@@ -487,9 +490,9 @@ class ConnectorExecutor:
         headers = {"Content-Type": "application/json"}
         sensitive: list[str] = []
         if definition.bearer_ref:
-            token = self.resolver.resolve(definition.bearer_ref)
-            headers["Authorization"] = f"Bearer {token}"
-            sensitive.append(token)
+            bearer_val = self.resolver.resolve(definition.bearer_ref)
+            headers["Authorization"] = f"Bearer {bearer_val}"
+            sensitive.append(bearer_val)
         body = {
             "plan_id": plan.id,
             "plan_hash": plan.plan_hash,

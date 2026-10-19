@@ -98,7 +98,10 @@ class OperationSettings:
             values.get("SUBACTOR_CONTROL_URL", "http://127.0.0.1:8091"), "SUBACTOR_CONTROL_URL"
         )
         planfile_url = _validated_origin(
-            values.get("SUBACTOR_PLANFILE_URL", values.get("PLANFILE_URL", "http://127.0.0.1:8765")),
+            values.get(
+                "SUBACTOR_PLANFILE_URL",
+                values.get("PLANFILE_PUBLIC_URL", values.get("PLANFILE_URL", "http://127.0.0.1:8765")),
+            ),
             "SUBACTOR_PLANFILE_URL",
         )
         observability_url = _validated_origin(
