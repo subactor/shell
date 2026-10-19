@@ -11,6 +11,7 @@ from pathlib import Path
 
 _ALLOWED_KEYS = frozenset(
     {
+        "PLANFILE_PUBLIC_URL",
         "SUBACTOR_ADMIN_TOKEN",
         "SUBACTOR_CONTROL_URL",
         "SUBACTOR_FOUNDER_URL",
@@ -90,4 +91,7 @@ def apply_control_environment(values: MutableMapping[str, str] | None = None) ->
     if not target.get("SUBACTOR_CONTROL_URL") and target.get("SUBACTOR_FOUNDER_URL"):
         target["SUBACTOR_CONTROL_URL"] = target["SUBACTOR_FOUNDER_URL"]
         applied.append("SUBACTOR_CONTROL_URL")
+    if not target.get("SUBACTOR_PLANFILE_URL") and target.get("PLANFILE_PUBLIC_URL"):
+        target["SUBACTOR_PLANFILE_URL"] = target["PLANFILE_PUBLIC_URL"]
+        applied.append("SUBACTOR_PLANFILE_URL")
     return tuple(applied)
