@@ -561,16 +561,14 @@ wheels = [
 
 [[package]]
 name = "clickmd"
-version = "1.1.15"
+version = "1.1.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "costs" },
-    { name = "goal" },
-    { name = "pfix" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/12/82b3b80bb2751e0d6c120c1beb11116527cca9322202b5a1924811b58376/clickmd-1.1.15.tar.gz", hash = "sha256:0a2971b952e471c4726bc2f88ed397abd395283c79e4885e435921426493d01c", size = 41145, upload-time = "2026-06-29T07:35:58.128Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/85/03d83de37d0bf64b6c40f768d99fe3a26b3a7fd145f07c3582e4c7a237eb/clickmd-1.1.16.tar.gz", hash = "sha256:1563414eff49c44b724d80efb0fc061ad1f40956a0b6f1340ff57560491dfeb7", size = 41299, upload-time = "2026-10-18T13:00:25.876Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/5c/398fafad25e456d86fe8fe7bf9a3873f2077564d42dcdd1426b76d01e915/clickmd-1.1.15-py3-none-any.whl", hash = "sha256:b191c0c26be5ef009ea27a3e88c1c7d633d95a6da2fc737f04f6727481bfeb5e", size = 45514, upload-time = "2026-06-29T07:35:56.53Z" },
+    { url = "https://files.pythonhosted.org/packages/80/c5/e4b12cde4fb4293d2088783ce35953ac1cd58a71a4585556a5050b4e5d12/clickmd-1.1.16-py3-none-any.whl", hash = "sha256:3017a8ce38140d11bc5c373d0b60e1356624b2ca69d037f591a963a491ade263", size = 45644, upload-time = "2026-10-18T13:00:22.961Z" },
 ]
 
 [[package]]
@@ -584,7 +582,7 @@ wheels = [
 
 [[package]]
 name = "costs"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
@@ -597,9 +595,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/6f/7f3c72d6d4b5264bd5a3447e18a3b5184bffee143f72c8d023bb759afd1a/costs-0.2.0.tar.gz", hash = "sha256:3782bae859725dae30f697b5f3e5aa5d84e06feadebc5782ae706e21d46437af", size = 44606, upload-time = "2026-09-05T15:49:55.524Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/37/65f757e8c2578b298716b4b1e1e659c0cb4b145053e94c92f8d6ecdce0db/costs-0.2.1.tar.gz", hash = "sha256:e861e839750b3834ef391a495eb6314e72610a01876f437cb1f70d7dd4ab5f90", size = 46413, upload-time = "2026-10-18T13:02:28.785Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/7e/fc91d9fdc7a1ceb9116daffab27124a54f6e8887c9d59d906df43dcbfa6a/costs-0.2.0-py3-none-any.whl", hash = "sha256:4798b8535cbbcbb354e440ebce91365f17c910414bf5831a0610998ae6e679af", size = 48625, upload-time = "2026-09-05T15:49:54.054Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/07/88a5ac166689f4c57d89052342ade6cc9f80b12f7a97473b74c6b3d7e73b/costs-0.2.1-py3-none-any.whl", hash = "sha256:8dabbf44441ad60d6a449b103e333fcfe36dafa92a5005c81c0b259139525706", size = 50918, upload-time = "2026-10-18T13:02:27.209Z" },
 ]
 
 [[package]]
@@ -1844,7 +1842,7 @@ wheels = [
 
 [[package]]
 name = "pfix"
-version = "0.1.79"
+version = "0.1.80"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "litellm" },
@@ -1853,9 +1851,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/7e/252be5e1d55321b947013010f45b02d781de87e25b9a524c0ee72c1ad3c0/pfix-0.1.79.tar.gz", hash = "sha256:6bc4c572e22e0f0d952bc5e2df78f52f8f999cab64e22138b097b2eab4d83092", size = 2845663, upload-time = "2026-07-05T17:00:57.331Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/d0/b0242b025cac41557f840e90f093f199b600b0b5ffde6f14d6469f75b2ed/pfix-0.1.80.tar.gz", hash = "sha256:b02c60b0407da6813f633374289d897cf95d6758f3719a9390ebaa143aad6a8f", size = 2778534, upload-time = "2026-10-18T13:35:35.223Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/bf/548982294e795d79003680b2214c7f5dd00ca4b0ea856064bf9cb6869ba7/pfix-0.1.79-py3-none-any.whl", hash = "sha256:bb7ab83b99c0bfbaae5e6e95cb801a27d4fd68749485600fdfe49dad00607461", size = 151754, upload-time = "2026-07-05T17:00:52.816Z" },
+    { url = "https://files.pythonhosted.org/packages/78/3b/757d9a0fbea0cab05ba7f030ff188dc7f296dab88e12661d20ad495ccef9/pfix-0.1.80-py3-none-any.whl", hash = "sha256:6c9c279ea3da2ece879ccbffc878d69dee131c4cda94de0a2e8280a80c401165", size = 156669, upload-time = "2026-10-18T13:35:29.976Z" },
 ]
 
 [[package]]
